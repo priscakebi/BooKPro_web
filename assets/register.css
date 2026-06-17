@@ -1,0 +1,80 @@
+/* ======================================================
+   REGISTER PAGE
+====================================================== */
+
+.register-page {
+
+    min-height: 100vh;
+
+    background: white;
+    
+}
+
+.register-card {
+
+    background: white;
+
+
+    padding: 30px;
+
+    
+}
+
+.register-card .logo {
+
+    font-size: 34px;
+
+    font-weight: bold;
+
+    color: #0d6efd;
+}
+
+.register-card h2 {
+
+    font-size: 28px;
+
+    font-weight: bold;
+}
+
+.subtitle {
+
+    color: #6c757d;
+
+    font-size: 14px;
+}
+
+.input-group-text {
+
+    background: #f8f9fa;
+
+    min-width: 40px;
+
+    justify-content: center;
+}
+
+.input-group-text i {
+
+    color: #0d6efd;
+}
+
+.register-card .form-control {
+
+    height: 50px;
+}
+
+.register-card .btn-primary {
+
+    height: 50px;
+
+    font-weight: 600;
+}
+
+.register-card a {
+
+    text-decoration: none;
+}
+
+.register-card a:hover {
+
+    text-decoration: underline;
+}

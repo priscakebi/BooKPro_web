@@ -1,0 +1,12 @@
+/* MOT DE PASSE OUBLIÉ */
+
+.forgot-password{
+    text-decoration: none;
+    font-size: 14px;
+    color: #0d6efd;
+    transition: 0.3s;
+}
+
+.forgot-password:hover{
+    color: #20c997;
+}

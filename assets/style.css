@@ -1,0 +1,77 @@
+/* ======================================================
+   INDEX PAGE (BOOKPRO ACCUEIL)
+====================================================== */
+
+/* HERO amélioré */
+.hero {
+    height: 100vh;
+    background: linear-gradient(135deg, #0d6efd, #20c997);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Titre HERO */
+.hero h1 {
+    font-size: 70px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Sous-titre */
+.hero p {
+    font-size: 22px;
+    margin-top: 10px;
+    opacity: 0.9;
+}
+
+.login-btn {
+
+    background: #0d6efd;
+    color: white;
+
+    padding: 8px 20px;
+
+    border-radius: 10px;
+
+    text-decoration: none;
+
+    box-shadow: 0 0 10px rgba(13, 110, 253, 0.6);
+
+    margin-left: 15px;
+
+    transition: 0.3s;
+}
+
+.login-btn:hover {
+
+    background: white;
+
+    color: #0d6efd;
+
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.9);
+}
+
+/* ======================================================
+   NAVBAR CLEAN MOBILE FIX
+====================================================== */
+
+@media (max-width: 991px) {
+
+    .navbar .d-flex {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .hero h1 {
+        font-size: 45px;
+    }
+
+    .hero p {
+        font-size: 18px;
+    }
+}
