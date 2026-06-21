@@ -4,18 +4,39 @@
 // ======================================================
 session_start();
 
+require("../config/database.php");
+
+$user_id = $_SESSION["user_id"];
+
+// TOTAL réservations
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$total = $stmt->fetchColumn();
+
+// EN ATTENTE
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ? AND statut = 'en_attente'");
+$stmt->execute([$user_id]);
+$attente = $stmt->fetchColumn();
+
+// CONFIRMÉES
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ? AND statut = 'confirmee'");
+$stmt->execute([$user_id]);
+$confirmees = $stmt->fetchColumn();
+
 // ======================================================
 // PROTECTION : si non connecté → login
 // ======================================================
-if (!isset($_SESSION['user'])) {
+if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit();
 }
 
-// ======================================================
-// RÉCUPÉRATION UTILISATEUR CONNECTÉ
-// ======================================================
-$user = $_SESSION['user'];
+$user = [
+    'id' => $_SESSION['user_id'],
+    'nom' => $_SESSION['nom'],
+    'email' => $_SESSION['email'],
+    'role' => $_SESSION['role']
+];
 ?>
 
 <!DOCTYPE html>
@@ -40,126 +61,143 @@ $user = $_SESSION['user'];
 
 <body class="dashboard-page">
 
-<div class="d-flex">
+    <div class="d-flex">
 
-    <!-- ======================================================
+        <!-- ======================================================
     SIDEBAR
     ====================================================== -->
-    <div class="sidebar p-3">
+        <div class="sidebar p-3">
 
-        <h3 class="text-white mb-4">
-            BookPro
-        </h3>
+            <h3 class="text-white mb-4">
+                BookPro
+            </h3>
 
-        <!-- USER INFO -->
-        <div class="user-box mb-4">
+            <!-- USER INFO -->
+            <div class="user-box mb-4">
 
-            <i class="bi bi-person-circle"></i>
+                <i class="bi bi-person-circle"></i>
 
-            <div>
-                <small>Bienvenue</small><br>
+                <div>
+                    <small>Bienvenue</small><br>
 
-                <!-- NOM SÉCURISÉ -->
-                <strong><?= htmlspecialchars($user['nom']) ?></strong>
+                    <!-- NOM SÉCURISÉ -->
+                    <strong><?= htmlspecialchars($user['nom']) ?></strong>
+                </div>
+
+            </div>
+
+            <!-- MENU -->
+            <a href="dashboard.php" class="menu active">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+
+            <a href="../user/reservations.php" class="menu">
+                <i class="bi bi-calendar-event"></i> Mes réservations
+            </a>
+
+
+
+            <a href="../auth/logout.php" class="menu text-danger">
+                <i class="bi bi-box-arrow-right"></i> Déconnexion
+            </a>
+
+            <div class="text-center mt-2">
+
+                <a href="../index.php">
+                    ← Retour à l'accueil
+                </a>
+
             </div>
 
         </div>
 
-        <!-- MENU -->
-        <a href="dashboard.php" class="menu active">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
 
-        <a href="#" class="menu">
-            <i class="bi bi-calendar-event"></i> Mes réservations
-        </a>
-
-        <a href="#" class="menu">
-            <i class="bi bi-clock-history"></i> Historique
-        </a>
-
-        <a href="#" class="menu">
-            <i class="bi bi-gear"></i> Paramètres
-        </a>
-
-        <a href="../auth/logout.php" class="menu text-danger">
-            <i class="bi bi-box-arrow-right"></i> Déconnexion
-        </a>
-
-    </div>
-
-    <!-- ======================================================
+        <!-- ======================================================
     CONTENT
     ====================================================== -->
-    <div class="content p-4 w-100">
+        <div class="content p-4 w-100">
 
-        <h2 class="mb-4">Tableau de bord</h2>
+            <h2 class="mb-4">Tableau de bord</h2>
 
-        <!-- ======================================================
+            <!-- ======================================================
         CARDS STATS (PAS DE DONNÉES BRUTES SQL)
         ====================================================== -->
-        <div class="row">
+            <div class="row">
 
-            <div class="col-md-4">
+                <div class="col-md-4">
 
-                <div class="card stat-card">
+                    <div class="card stat-card">
 
-                    <i class="bi bi-calendar-check"></i>
+                        <i class="bi bi-calendar-check"></i>
 
-                    <h4>0</h4>
+                        <h4><?= $total ?></h4>
 
-                    <p>Réservations</p>
+                        <p>Réservations</p>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="card stat-card">
+
+                        <i class="bi bi-hourglass-split"></i>
+
+                        <h4><?= $attente ?></h4>
+
+                        <p>En attente</p>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <div class="card stat-card">
+
+                        <i class="bi bi-check-circle"></i>
+
+                        <h4><?= $confirmees ?></h4>
+
+                        <p>Confirmées</p>
+
+                    </div>
 
                 </div>
 
             </div>
-
-            <div class="col-md-4">
-
-                <div class="card stat-card">
-
-                    <i class="bi bi-hourglass-split"></i>
-
-                    <h4>0</h4>
-
-                    <p>En attente</p>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-4">
-
-                <div class="card stat-card">
-
-                    <i class="bi bi-check-circle"></i>
-
-                    <h4>0</h4>
-
-                    <p>Confirmées</p>
-
-                </div>
-
-            </div>
-
-        </div>
 
         <!-- ======================================================
-        SECTION BIENVENUE (UI PROPRE)
-        ====================================================== -->
-        <div class="card mt-4 p-4">
+CONTENT
+====================================================== -->
 
-            <h4>Bienvenue <?= htmlspecialchars($user['nom']) ?> 👋</h4>
+            <h2 class="mb-4">Tableau de bord</h2>
 
-            <p class="text-muted mb-0">
-                Ici tu peux gérer tes réservations, consulter ton historique et modifier ton profil.
-            </p>
+            <!-- CARDS -->
+            <div class="row">
+                ...
+            </div>
+
+            <!-- BIENVENUE -->
+            <div class="card mt-4 p-4">
+                <h4>Bienvenue <?= htmlspecialchars($user['nom']) ?> 👋</h4>
+                <p class="text-muted mb-0">
+                    Ici tu peux gérer tes réservations, consulter ton historique.
+                </p>
+            </div>
+
+            <!-- BOUTON RÉSERVER -->
+            <div class="mt-4">
+                <a href="../services/services.php" class="btn btn-primary">
+                    Réserver un service
+                </a>
+            </div>
 
         </div>
 
     </div>
 
-</div>
-
 </body>
+
 </html>

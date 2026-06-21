@@ -1,6 +1,14 @@
-</div>
+<footer class="bg-dark text-white py-4">
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <div class="container text-center">
 
-</body>
+            <p class="mb-0">
+
+                © 2026 BookPro - Tous droits réservés
+
+            </p>
+
+        </div>
+
+    </footer>
 </html>

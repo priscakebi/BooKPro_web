@@ -209,7 +209,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <a href="login.php">
                             Se connecter
                         </a>
-
+   
                     </div>
 
                     <div class="text-center mt-2">

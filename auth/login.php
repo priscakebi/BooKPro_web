@@ -10,78 +10,71 @@ session_start();
 require("../config/database.php");
 
 // ======================================================
-// VARIABLE POUR LES MESSAGES
+// MESSAGE D'ERREUR
 // ======================================================
 $message = "";
 
 // ======================================================
-// TRAITEMENT DU FORMULAIRE DE CONNEXION
+// TRAITEMENT DU FORMULAIRE
 // ======================================================
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    // ==================================================
-    // RÉCUPÉRATION DES DONNÉES
-    // ==================================================
-    $email = htmlspecialchars(trim($_POST["email"]));
-    $pass = $_POST["password"];
+    // Récupération des données
+    $email = trim($_POST["email"]);
+    $password = $_POST["password"];
 
-    // ==================================================
-    // RECHERCHE DE L'UTILISATEUR
-    // ==================================================
+    // Recherche de l'utilisateur
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);
 
-    // Récupération de l'utilisateur
-    $user = $stmt->fetch();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
 
-    // ==================================================
-    // VÉRIFICATION DU MOT DE PASSE
-    // ==================================================
-    if ($user && password_verify($pass, $user["password"])) {
+    // Vérification de l'utilisateur et du mot de passe
+    if ($user && password_verify($password, $user["password"])) {
 
-        // ==============================================
-        // CRÉATION DES VARIABLES DE SESSION
-        // ==============================================
-        $_SESSION["user"] = $user;
+        // Création des variables de session
         $_SESSION["user_id"] = $user["id"];
+        $_SESSION["nom"] = $user["nom"];
         $_SESSION["email"] = $user["email"];
         $_SESSION["role"] = $user["role"];
 
-        // Régénération de l'identifiant de session
+        // Sécurité
         session_regenerate_id(true);
 
-        // ==============================================
-        // REDIRECTION SELON LE RÔLE
-        // ==============================================
-        if ($user["role"] === "admin") {
+        // Redirection selon le rôle
+        switch ($user["role"]) {
 
-            header("Location: ../admin/dashboard.php");
-            exit();
+            case "admin":
+                header("Location: ../admin/admin-dashboard.php");
+                exit();
 
-        } elseif ($user["role"] === "professionnel") {
+            case "professionnel":
+                header("Location: ../pro/pro-dashboard.php");
+                exit();
 
-            header("Location: ../pro/pro-dashboard.php");
-            exit();
+            case "client":
+                header("Location: ../user/dashboard.php");
+                echo "connexion reussie";
+                exit();
 
-        } else {
-
-            // Client
-            header("Location: ../user/services.php");
-            exit();
-
+            default:
+                // Si le rôle est vide ou inconnu
+                session_destroy();
+                $message = "
+                    <div class='alert alert-danger'>
+                        Ce compte n'a pas de rôle valide.
+                    </div>
+                ";
         }
 
     } else {
 
-        // ==============================================
-        // IDENTIFIANTS INCORRECTS
-        // ==============================================
         $message = "
             <div class='alert alert-danger'>
                 Email ou mot de passe incorrect.
             </div>
         ";
-
     }
 }
 ?>

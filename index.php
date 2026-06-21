@@ -4,7 +4,7 @@ session_start();
 // ======================================================
 // UTILISATEUR CONNECTÉ ?
 // ======================================================
-$user = $_SESSION['user'] ?? null;
+$userConnected = isset($_SESSION['user_id']);
 ?>
 
 <!DOCTYPE html>
@@ -46,79 +46,97 @@ NAVBAR
     <!-- ======================================================
 NAVBAR
 ====================================================== -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
 
-    <div class="container">
+        <div class="container">
 
-        <!-- LOGO -->
-        <a class="navbar-brand fw-bold" href="index.php">
-            BookPro
-        </a>
-
-        <!-- MENU -->
-        <div class="ms-auto d-flex align-items-center gap-3">
-
-            <!-- ACCUEIL -->
-            <a class="nav-link text-white" href="index.php">
-                Accueil
+            <!-- LOGO -->
+            <a class="navbar-brand fw-bold" href="index.php">
+                BookPro
             </a>
 
-            <!-- SERVICES -->
-            <a class="nav-link text-white" href="user/services.php">
-                Services
-            </a>
+            <!-- MENU -->
+            <div class="ms-auto d-flex align-items-center gap-3">
 
-            <!-- PROFESSIONNELS -->
-            <a class="nav-link text-white" href="./auth/pro-register.php">
-                Devenir Professionnel
-            </a>
-
-            <?php if ($user): ?>
-
-                <!-- MON COMPTE -->
-                <a class="nav-link text-white"
-                   href="user/dashboard.php">
-
-                    <i class="bi bi-person-circle"></i>
-
+                <!-- ACCUEIL -->
+                <a class="nav-link text-white" href="index.php">
+                    Accueil
                 </a>
 
-                <!-- DÉCONNEXION -->
-                <a class="nav-link text-danger"
-                   href="auth/logout.php">
-
-                    <i class="bi bi-box-arrow-right"></i>
-
+                <!-- SERVICES -->
+                <a class="nav-link text-white" href="./services/services.php">
+                    Services
                 </a>
 
-            <?php else: ?>
-
-                <!-- CONNEXION -->
-                <a class="login-btn"
-                   href="auth/login.php">
-
-                    Se connecter
-
+                <!-- PROFESSIONNELS -->
+                <a class="nav-link text-white" href="./auth/pro-register.php">
+                    Devenir Professionnel
                 </a>
 
-            <?php endif; ?>
+                <?php if (isset($_SESSION['user_id'])): ?>
+
+    <?php
+    // Choix du tableau de bord selon le rôle
+    if ($_SESSION['role'] == "professionnel") {
+        $dashboard = "pro/pro-dashboard.php";
+    } elseif ($_SESSION['role'] == "admin") {
+        $dashboard = "admin/dashboard.php";
+    } else {
+        $dashboard = "user/dashboard.php";
+    }
+    ?>
+
+    <!-- MON COMPTE -->
+    <a class="nav-link text-white" href="<?= $dashboard ?>">
+        <i class="bi bi-person-circle"></i>
+        Mon compte
+    </a>
+
+    <!-- DÉCONNEXION -->
+    <a class="nav-link text-danger" href="auth/logout.php">
+        <i class="bi bi-box-arrow-right"></i>
+        Déconnexion
+    </a>
+
+<?php else: ?>
+
+    <!-- CONNEXION -->
+    <a class="login-btn" href="auth/login.php">
+        Se connecter
+    </a>
+
+<?php endif; ?>
+
+            </div>
 
         </div>
 
-    </div>
+    </nav>
 
-</nav>
-
-     <!--====================================================== 
-    HERO ====================================================== --> 
+    <!--====================================================== 
+    HERO ====================================================== -->
     <section class="hero">
         <div class="text-center">
             <h1>BookPro</h1>
-            <p> Trouvez et réservez vos services en quelques clics </p> 
+            <p> Trouvez et réservez vos services en quelques clics </p>
             <!-- SEARCH -->
-            <form class="search-box"> 
-                <input type="text" class="form-control form-control-lg mb-3" placeholder="Plombier, mécanicien, menuisier..."> 
-                <button class="btn btn-light w-100"> Rechercher </button> 
+            <form class="search-box" method="GET" action="services.php">
+
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control form-control-lg mb-3"
+                    placeholder="Plombier, mécanicien, menuisier..."
+                    value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+
+                <button
+                    type="submit"
+                    class="btn btn-light w-100">
+
+                    Rechercher
+
+                </button>
+
             </form>
         </div>
     </section>

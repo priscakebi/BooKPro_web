@@ -20,6 +20,8 @@ $message = "";
 // ======================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
+
+
     // ==================================================
     // RÉCUPÉRATION DES DONNÉES
     // ==================================================
@@ -107,34 +109,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // ======================================
 
                 $insert = $pdo->prepare("
+    INSERT INTO users (
+        nom,
+        email,
+        telephone,
+        entreprise,
+        siret,
+        metier,
+        ville,
+        password,
+        role
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+");
 
-                        INSERT INTO users (
-                            nom,
-                            email,
-                            telephone,
-                            entreprise,
-                            siret,
-                            metier,
-                            ville,
-                            password,
-                            role
-                        )
-                        VALUES (
-                            ?, ?, ?, ?, ?, ?, ?, ?, 'professionnel'
-                        )
-
-                    ");
-
-                $insert->execute([
-                    $nom,
-                    $email,
-                    $telephone,
-                    $entreprise,
-                    $siret,
-                    $metier,
-                    $ville,
-                    $passwordHash
-                ]);
+$insert->execute([
+    $nom,
+    $email,
+    $telephone,
+    $entreprise,
+    $siret,
+    $metier,
+    $ville,
+    password_hash($password, PASSWORD_DEFAULT),
+    "professionnel"
+]);
 
                 // ======================================
                 // MESSAGE DE SUCCÈS
