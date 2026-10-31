@@ -2,6 +2,7 @@
 require_once("includes/auth.php");
 require("config/database.php");
 require("includes/pros.php");
+require_once("includes/conges.php");
 
 // ======================================================
 // DONNÉES DE LA PAGE
@@ -11,9 +12,10 @@ require("includes/pros.php");
 $nbPros = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM services")->fetchColumn();
 $nbServices = $pdo->query("SELECT COUNT(*) FROM services")->fetchColumn();
 $nbCreneaux = $pdo->query("
-    SELECT COUNT(*) FROM disponibilites d
+    SELECT COUNT(*) FROM disponibilites d JOIN services s ON d.service_id = s.id
     WHERE CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
       AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL)
+      AND " . SQL_HORS_CONGES . "
 ")->fetchColumn();
 
 // Nombre de pros par métier

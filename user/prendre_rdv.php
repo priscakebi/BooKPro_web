@@ -11,6 +11,7 @@ require_login('client');
 require("../config/database.php");
 require_once("../config/mail.php");
 require_once("../includes/reservations.php");
+require_once("../includes/conges.php");
 
 // Anciens liens ?service=ID : on renvoie vers la page du pro
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -36,6 +37,7 @@ $stmt = $pdo->prepare("
     JOIN users u ON s.user_id = u.id
     WHERE d.id = ?
       AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
+      AND " . SQL_HORS_CONGES . "
 
 ");
 $stmt->execute([(int) ($_POST['disponibilite_id'] ?? 0)]);

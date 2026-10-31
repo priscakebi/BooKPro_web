@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "/conges.php";
+
 // ======================================================
 // REQUÊTES SUR LES PROFESSIONNELS (accueil, recherche, profil)
 // ======================================================
@@ -55,6 +57,7 @@ function rechercher_pros(PDO $pdo, array $filtres = [], $limit = 60)
                    WHERE CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
                      AND NOT EXISTS (SELECT 1 FROM reservations r
                                      WHERE r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL)
+                     AND " . SQL_HORS_CONGES . "
                    GROUP BY s.user_id) dp ON dp.user_id = u.id
 
         WHERE " . implode(' AND ', $where) . "

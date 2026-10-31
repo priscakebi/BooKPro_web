@@ -10,6 +10,7 @@ require_login('professionnel');
 
 require("../config/database.php");
 require("../includes/reservations.php");
+require_once("../includes/conges.php");
 
 $proId = $_SESSION['user_id'];
 
@@ -89,6 +90,9 @@ $y = fn($t) => ($minutes($t) - $debutJour * 60) / 60 * $hauteurHeure;
 // Demandes à traiter (toutes semaines confondues)
 $aTraiterListe = demandes_en_attente($pdo, $proId, 20);
 
+// Congés / fermetures de la semaine
+$conges = conges_periode($pdo, $proId, $lundi, $dimanche);
+
 // Chiffres de la semaine
 $nbConfirmes = 0;
 $caSemaine = 0;
@@ -146,7 +150,7 @@ CARTE APPLICATION (installation + notifications)
         <div class="d-flex flex-wrap align-items-center gap-3 py-2 border-bottom" id="resa-<?= (int) $d['id'] ?>">
             <div class="flex-grow-1">
                 <strong><?= e($d['client']) ?></strong> · <?= e($d['nom_service']) ?>
-                <div class="small text-muted text-capitalize"><?= e(jour_court($d['date_disponible'])) ?> · <?= heure($d['heure_debut']) ?> - <?= heure($d['heure_fin']) ?> · <?= prix($d['prix']) ?></div>
+                <div class="small text-muted text-capitalize-first"><?= e(jour_court($d['date_disponible'])) ?> · <?= heure($d['heure_debut']) ?> - <?= heure($d['heure_fin']) ?> · <?= prix($d['prix']) ?></div>
             </div>
             <div class="d-flex gap-2">
                 <?php foreach (['confirmer' => 'btn-success', 'refuser' => 'btn-outline-danger'] as $action => $style): ?>
@@ -187,6 +191,9 @@ VUE SEMAINE (ordinateur / tablette)
             <div class="agenda-head <?= $jour === date('Y-m-d') ? 'today' : '' ?>">
                 <small><?= e(explode(' ', jour_court($jour))[0]) ?></small>
                 <strong><?= date('j', strtotime($jour)) ?></strong>
+                <?php if (conge_du_jour($conges, $jour)): ?>
+                    <span class="badge bg-warning-subtle text-warning-emphasis d-block mt-1">Fermé</span>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
 
@@ -200,12 +207,13 @@ VUE SEMAINE (ordinateur / tablette)
         <!-- Jours -->
         <?php foreach ($jours as $jour): ?>
 
-            <?php $num = (int) date('N', strtotime($jour)); ?>
+            <?php $num = (int) date('N', strtotime($jour)); $conge = conge_du_jour($conges, $jour); ?>
 
-            <div class="agenda-col <?= empty($ouverture[$num]) ? 'closed' : '' ?> <?= $jour === date('Y-m-d') ? 'today' : '' ?>"
-                 style="height: <?= ($finJour - $debutJour) * $hauteurHeure ?>px">
+            <div class="agenda-col <?= empty($ouverture[$num]) ? 'closed' : '' ?> <?= $jour === date('Y-m-d') ? 'today' : '' ?> <?= $conge ? 'conge' : '' ?>"
+                 style="height: <?= ($finJour - $debutJour) * $hauteurHeure ?>px"
+                 <?= $conge ? 'title="' . e('Fermé' . ($conge['motif'] ? ' : ' . $conge['motif'] : '')) . '"' : '' ?>>
 
-                <?php foreach ($ouverture[$num] ?? [] as [$o, $f]): ?>
+                <?php foreach ($conge ? [] : ($ouverture[$num] ?? []) as [$o, $f]): ?>
                     <div class="agenda-open" style="top: <?= $y($o) ?>px; height: <?= $y($f) - $y($o) ?>px"></div>
                 <?php endforeach; ?>
 
@@ -255,6 +263,10 @@ VUE JOUR (mobile)
         <?php $actif = $jour === date('Y-m-d') || ($i === 0 && !in_array(date('Y-m-d'), $jours, true)); ?>
         <div class="day-panel <?= $actif ? 'active' : '' ?>" id="jour-m-<?= $jour ?>">
 
+            <?php if ($c = conge_du_jour($conges, $jour)): ?>
+                <div class="alert alert-warning small"><i class="bi bi-calendar-x-fill me-1"></i> Fermé<?= $c['motif'] ? ' · ' . e($c['motif']) : '' ?></div>
+            <?php endif; ?>
+
             <?php if (empty($evenements[$jour])): ?>
                 <div class="bp-card empty-state py-4"><i class="bi bi-cup-hot"></i>Rien de prévu ce jour-là.</div>
             <?php endif; ?>
@@ -288,7 +300,7 @@ FENÊTRE DE DÉTAIL D'UN CRÉNEAU
             </div>
 
             <div class="modal-body">
-                <p class="text-muted mb-2 text-capitalize" id="evQuand"></p>
+                <p class="text-muted mb-2 text-capitalize-first" id="evQuand"></p>
                 <p class="mb-3" id="evService"></p>
                 <div id="evClient" class="p-3 rounded-4 mb-3" style="background: var(--bp-bg)"></div>
 

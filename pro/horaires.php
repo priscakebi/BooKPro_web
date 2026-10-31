@@ -11,6 +11,7 @@ require_once("../includes/auth.php");
 require_login('professionnel');
 
 require("../config/database.php");
+require_once("../includes/conges.php");
 
 $proId = $_SESSION['user_id'];
 
@@ -71,12 +72,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $crees = 0;
             $ignores = 0;
+            $joursFermes = 0;
+
+            $conges = conges_periode($pdo, $proId, $du, $au);
 
             $pdo->beginTransaction();
 
             for ($t = strtotime($du); $t <= strtotime($au); $t = strtotime('+1 day', $t)) {
 
                 $date = date('Y-m-d', $t);
+
+                // Jour de congé / fermeture : aucun créneau
+                if (conge_du_jour($conges, $date)) {
+                    $joursFermes += isset($ouverture[date('N', $t)]) ? 1 : 0;
+                    continue;
+                }
 
                 foreach ($ouverture[date('N', $t)] ?? [] as [$ouv, $ferm]) {
 
@@ -106,7 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $pdo->commit();
 
             flash("$crees créneau" . ($crees > 1 ? 'x' : '') . " créé" . ($crees > 1 ? 's' : '')
-                . ($ignores ? " ($ignores ignoré" . ($ignores > 1 ? 's' : '') . " car déjà occupé" . ($ignores > 1 ? 's' : '') . ")" : "") . ".",
+                . ($ignores ? " ($ignores ignoré" . ($ignores > 1 ? 's' : '') . " car déjà occupé" . ($ignores > 1 ? 's' : '') . ")" : "")
+                . ($joursFermes ? ", $joursFermes jour" . ($joursFermes > 1 ? 's' : '') . " de fermeture sauté" . ($joursFermes > 1 ? 's' : '') : "") . ".",
                 $crees ? "success" : "warning");
         }
 
@@ -123,6 +134,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             flash("Le créneau ne peut pas être dans le passé.", "danger");
         } elseif ($fin <= $debut) {
             flash("L'heure de fin doit être après l'heure de début.", "danger");
+        } elseif ($c = conge_du_jour(conges_periode($pdo, $proId, $jour, $jour), $jour)) {
+            flash("Vous êtes fermé ce jour-là (" . libelle_conge($c) . "). Modifiez vos congés pour ouvrir ce créneau.", "danger");
         } else {
 
             $overlap->execute([$proId, $jour, $fin, $debut]);
@@ -319,7 +332,7 @@ CRÉNEAUX À VENIR
         <div class="py-3 border-bottom">
 
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong class="text-capitalize"><?= e(jour_court($date)) ?></strong>
+                <strong class="text-capitalize-first"><?= e(jour_court($date)) ?></strong>
                 <form method="POST" onsubmit="return confirm('Supprimer tous les créneaux libres de ce jour ?');">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="vider_jour">

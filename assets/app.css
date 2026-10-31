@@ -968,6 +968,15 @@ h1, h2, h3, h4, h5 {
 
 .agenda-col.today { background-color: #f8f7ff; }
 
+/* Jour de congé : hachures */
+.agenda-col.conge {
+    background-color: #fffaf0;
+    background-image:
+        repeating-linear-gradient(135deg, rgba(245, 165, 36, .14) 0 8px, transparent 8px 16px),
+        linear-gradient(to bottom, var(--bp-border) 1px, transparent 1px);
+    background-size: auto, 100% var(--h);
+}
+
 /* Plages d'ouverture (fond léger) */
 .agenda-open {
     position: absolute;
@@ -1108,3 +1117,8 @@ h1, h2, h3, h4, h5 {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .js .reveal { opacity: 1; transform: none; }
 }
+
+/* Majuscule sur la première lettre seulement ("Lun. 2 nov.") */
+.text-capitalize-first { display: inline-block; }
+.text-capitalize-first::first-letter { text-transform: uppercase; }
+td.text-capitalize-first, div.text-capitalize-first, li.text-capitalize-first { display: revert; }

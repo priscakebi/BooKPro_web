@@ -179,7 +179,7 @@ PROCHAINES RÉSERVATIONS
             <tbody>
             <?php foreach ($prochaines as $r): ?>
                 <tr>
-                    <td class="fw-semibold text-capitalize"><?= e(jour_court($r['date_disponible'])) ?></td>
+                    <td class="fw-semibold text-capitalize-first"><?= e(jour_court($r['date_disponible'])) ?></td>
                     <td><?= heure($r['heure_debut']) ?> - <?= heure($r['heure_fin']) ?></td>
                     <td><?= e($r['nom_service']) ?> <small class="text-muted">· <?= prix($r['prix']) ?></small></td>
                     <td><?= e($r['client']) ?></td>

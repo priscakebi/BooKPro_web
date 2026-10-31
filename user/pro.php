@@ -6,6 +6,7 @@
 require_once("../includes/auth.php");
 require("../config/database.php");
 require("../includes/pros.php");
+require_once("../includes/conges.php");
 
 $id = (int) ($_GET['id'] ?? 0);
 
@@ -30,6 +31,7 @@ $stmt = $pdo->prepare("
              WHERE d.service_id = s.id
                AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
                AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL)
+               AND " . SQL_HORS_CONGES . "
            ) AS libres
     FROM services s WHERE s.user_id = ? ORDER BY s.prix
 ");
@@ -59,6 +61,7 @@ if ($serviceId) {
         WHERE d.service_id = ?
           AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
           AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL)
+          AND NOT EXISTS (SELECT 1 FROM conges cg WHERE cg.user_id = " . (int) $id . " AND d.date_disponible BETWEEN cg.date_debut AND cg.date_fin)
         ORDER BY d.date_disponible, d.heure_debut
         LIMIT 200
     ");
@@ -89,6 +92,10 @@ $note = $avis ? round(array_sum(array_column($avis, 'note')) / count($avis), 1) 
 
 $horaires = horaires_pro($pdo, $id);
 $aDesHoraires = (bool) array_filter($horaires);
+
+// Fermetures exceptionnelles des 2 prochains mois
+$fermetures = conges_periode($pdo, $id, date('Y-m-d'), date('Y-m-d', strtotime('+60 days')));
+$fermeAujourdhui = conge_du_jour($fermetures, date('Y-m-d'));
 
 $estClient = ($_SESSION['role'] ?? '') === 'client';
 $connecte = isset($_SESSION['user_id']);
@@ -146,6 +153,16 @@ include("../includes/public_header.php");
         <div class="col-lg-8">
 
             <?php include("../includes/alertes.php"); ?>
+
+            <?php foreach ($fermetures as $f): ?>
+                <div class="alert alert-warning d-flex gap-2 align-items-start reveal">
+                    <i class="bi bi-calendar-x-fill mt-1"></i>
+                    <div>
+                        <strong>Fermé <?= e(libelle_conge($f)) ?></strong>
+                        <?php if ($f['motif']): ?><div class="small"><?= e($f['motif']) ?></div><?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
 
             <?php if ($pro['description']): ?>
                 <div class="bp-card mb-4 reveal">
@@ -298,7 +315,13 @@ include("../includes/public_header.php");
                             <?php foreach (JOURS as $num => $jour): ?>
                                 <li class="<?= $num == date('N') ? 'today' : '' ?>">
                                     <span><?= $jour ?></span>
-                                    <span><?= $horaires[$num] ? e(implode(', ', $horaires[$num])) : '<span class="text-muted">Fermé</span>' ?></span>
+                                    <span>
+                                        <?php if ($num == date('N') && $fermeAujourdhui): ?>
+                                            <span class="text-warning-emphasis">Fermé exceptionnellement</span>
+                                        <?php else: ?>
+                                            <?= $horaires[$num] ? e(implode(', ', $horaires[$num])) : '<span class="text-muted">Fermé</span>' ?>
+                                        <?php endif; ?>
+                                    </span>
                                 </li>
                             <?php endforeach; ?>
                         </ul>

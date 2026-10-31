@@ -36,6 +36,7 @@ $menus = [
         'services'     => ['/pro/services.php', 'bi-tags', 'Services & tarifs'],
         'ouverture'    => ['/pro/ouverture.php', 'bi-shop', "Horaires d'ouverture"],
         'horaires'     => ['/pro/horaires.php', 'bi-calendar-plus', 'Disponibilités'],
+        'conges'       => ['/pro/conges.php', 'bi-airplane', 'Congés & fermetures'],
         'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
     ],
     'admin' => [
