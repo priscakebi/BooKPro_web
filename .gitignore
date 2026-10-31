@@ -1,3 +1,4 @@
 sql/backup_*.sql
 uploads/pros/*
 !uploads/pros/.gitkeep
+config/secrets.php

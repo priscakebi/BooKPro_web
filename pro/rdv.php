@@ -9,7 +9,7 @@ require_once("../includes/auth.php");
 require_login('professionnel');
 
 require("../config/database.php");
-require("../config/mail.php");
+require("../includes/reservations.php");
 
 $proId = $_SESSION['user_id'];
 
@@ -21,56 +21,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     csrf_check();
 
-    // Transitions autorisées : statut actuel => nouveau statut
-    $transitions = [
-        'confirmer' => ['en_attente', 'confirmee'],
-        'refuser'   => ['en_attente', 'refusee'],
-        'annuler'   => ['confirmee', 'annulee'],
-    ];
+    [$ok, $message] = changer_statut_pro($pdo, $proId, $_POST['id'] ?? 0, $_POST['action'] ?? '');
 
-    $action = $_POST['action'] ?? '';
+    flash($message, $ok ? "success" : "danger");
 
-    if (isset($transitions[$action])) {
+    // Retour à la page d'origine (agenda, tableau de bord...) si elle est dans l'espace pro
+    $retour = safe_next($_POST['retour'] ?? null);
 
-        [$avant, $apres] = $transitions[$action];
-
-        // Uniquement une réservation d'un service du pro, à venir
-        $stmt = $pdo->prepare("
-
-            SELECT r.id, u.email, s.nom_service, d.date_disponible, d.heure_debut
-            FROM reservations r
-            JOIN disponibilites d ON r.disponibilite_id = d.id
-            JOIN services s ON d.service_id = s.id
-            JOIN users u ON r.user_id = u.id
-            WHERE r.id = ? AND s.user_id = ? AND r.statut = ?
-              AND d.date_disponible >= CURDATE()
-
-        ");
-        $stmt->execute([(int) ($_POST['id'] ?? 0), $proId, $avant]);
-        $resa = $stmt->fetch();
-
-        if ($resa) {
-
-            $pdo->prepare("UPDATE reservations SET statut = ? WHERE id = ?")
-                ->execute([$apres, $resa['id']]);
-
-            $libelles = ['confirmee' => 'confirmée', 'refusee' => 'refusée', 'annulee' => 'annulée'];
-
-            sendMail(
-                $resa['email'],
-                "Votre réservation BookPro",
-                "Votre réservation « {$resa['nom_service']} » du " . date_fr($resa['date_disponible'])
-                    . " à " . heure($resa['heure_debut']) . " a été " . $libelles[$apres] . "."
-            );
-
-            flash("Réservation " . $libelles[$apres] . ".");
-
-        } else {
-            flash("Action impossible sur cette réservation.", "danger");
-        }
-    }
-
-    redirect("/pro/rdv.php");
+    redirect($retour && str_starts_with($retour, '/pro/') ? $retour : "/pro/rdv.php");
 }
 
 // ======================================================

@@ -9,7 +9,8 @@ require_once("../includes/auth.php");
 require_login('client');
 
 require("../config/database.php");
-require("../config/mail.php");
+require_once("../config/mail.php");
+require_once("../includes/reservations.php");
 
 // Anciens liens ?service=ID : on renvoie vers la page du pro
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -54,6 +55,8 @@ try {
     $pdo->prepare("INSERT INTO reservations (user_id, disponibilite_id, statut) VALUES (?, ?, 'en_attente')")
         ->execute([$_SESSION['user_id'], $dispo['id']]);
 
+    $resaId = (int) $pdo->lastInsertId();
+
 } catch (PDOException $ex) {
 
     // 23000 = contrainte UNIQUE violée
@@ -73,6 +76,9 @@ sendMail($_SESSION['email'], "Demande de réservation envoyée",
 
 sendMail($dispo['pro_email'], "Nouvelle réservation",
     "Nouvelle demande pour « {$dispo['nom_service']} » le $quand. Connectez-vous à BookPro pour la confirmer.");
+
+// Notification instantanée sur les appareils du pro (boutons Confirmer / Refuser)
+notifier_nouvelle_demande($pdo, $resaId);
 
 flash("Demande envoyée pour le $quand ! Le professionnel doit maintenant la confirmer.");
 

@@ -29,6 +29,8 @@ $role = $_SESSION['role'] ?? '';
     <!-- Active les animations uniquement si le JavaScript fonctionne -->
     <script>document.documentElement.classList.add("js");</script>
 
+    <link rel="icon" type="image/png" href="<?= BASE_URL ?>/assets/icons/favicon.png">
+
 </head>
 
 <body>

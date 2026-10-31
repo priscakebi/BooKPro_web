@@ -31,6 +31,7 @@ $menus = [
     ],
     'professionnel' => [
         'dashboard'    => ['/pro/pro-dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+        'agenda'       => ['/pro/agenda.php', 'bi-calendar-week', 'Agenda'],
         'profil'       => ['/pro/profil.php', 'bi-person-badge', 'Mon profil'],
         'services'     => ['/pro/services.php', 'bi-tags', 'Services & tarifs'],
         'ouverture'    => ['/pro/ouverture.php', 'bi-shop', "Horaires d'ouverture"],
@@ -64,9 +65,24 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
     <!-- Active les animations uniquement si le JavaScript fonctionne -->
     <script>document.documentElement.classList.add("js");</script>
 
+    <link rel="icon" type="image/png" href="<?= BASE_URL ?>/assets/icons/favicon.png">
+
+    <?php if ($role === 'professionnel'): ?>
+        <!-- Application pro installable (PWA) -->
+        <?php require_once __DIR__ . "/webpush.php"; ?>
+        <link rel="manifest" href="<?= BASE_URL ?>/pro/manifest.json">
+        <meta name="theme-color" content="#16123a">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="BookPro Pro">
+        <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icons/apple-touch-icon.png">
+        <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
+    <?php endif; ?>
+
 </head>
 
-<body>
+<body data-base="<?= BASE_URL ?>" <?= $role === 'professionnel' ? 'data-vapid="' . e(vapid_public_key()) . '"' : '' ?>>
 
 <div class="app-shell">
 

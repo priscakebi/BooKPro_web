@@ -38,9 +38,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ");
         $update->execute([$id, $userId]);
 
-        $update->rowCount()
-            ? flash("Réservation annulée.")
-            : flash("Cette réservation ne peut plus être annulée.", "danger");
+        if ($update->rowCount()) {
+            flash("Réservation annulée.");
+
+            // Le pro est prévenu tout de suite : le créneau redevient libre
+            require_once("../includes/reservations.php");
+            notifier_pro_info($pdo, $id, "Réservation annulée par le client");
+        } else {
+            flash("Cette réservation ne peut plus être annulée.", "danger");
+        }
 
     } elseif ($action === 'avis') {
 

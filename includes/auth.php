@@ -116,6 +116,14 @@ function jour_court($date)
     return $jours[date('N', $t)] . ' ' . date('j', $t) . ' ' . $mois[date('n', $t)];
 }
 
+// Lundi de la semaine d'une date (Y-m-d)
+function lundi_de($date)
+{
+    $t = strtotime($date);
+
+    return date('Y-m-d', strtotime('-' . (date('N', $t) - 1) . ' days', $t));
+}
+
 // Prix : 56.00 => "56 €", 56.50 => "56,50 €"
 function prix($montant)
 {

@@ -155,7 +155,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
            : flash("Rien à supprimer : les créneaux réservés sont conservés.", "warning");
     }
 
-    redirect("/pro/horaires.php");
+    // Retour à la page d'origine (ex : agenda) si elle est dans l'espace pro
+    $retour = safe_next($_POST['retour'] ?? null);
+
+    redirect($retour && str_starts_with($retour, '/pro/') ? $retour : "/pro/horaires.php");
 }
 
 // ======================================================

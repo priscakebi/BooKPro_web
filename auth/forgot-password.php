@@ -1,7 +1,7 @@
 <?php
 require_once("../includes/auth.php");
 require("../config/database.php");
-require("../config/mail.php");
+require_once("../config/mail.php");
 
 $envoye = false;
 
