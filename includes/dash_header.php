@@ -8,8 +8,9 @@
 require_once __DIR__ . "/auth.php";
 
 $role = $_SESSION['role'] ?? '';
+$userId = (int) ($_SESSION['user_id'] ?? 0);
 
-// Pastille "à traiter" sur le menu Réservations du pro
+// Pastilles : demandes à traiter (pro), avis récents à modérer (admin)
 $aTraiter = 0;
 
 if ($role === 'professionnel' && isset($pdo)) {
@@ -19,38 +20,67 @@ if ($role === 'professionnel' && isset($pdo)) {
         JOIN services s ON d.service_id = s.id
         WHERE s.user_id = ? AND r.statut = 'en_attente' AND d.date_disponible >= CURDATE()
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$userId]);
     $aTraiter = (int) $stmt->fetchColumn();
 }
 
+// ======================================================
+// MENUS PAR RÔLE, REGROUPÉS EN RUBRIQUES
+// clé => [lien, icône, libellé, pastille]
+// ======================================================
 $menus = [
     'client' => [
-        'dashboard'    => ['/user/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
-        'services'     => ['/user/services.php', 'bi-search', 'Trouver un pro'],
-        'reservations' => ['/user/reservations.php', 'bi-calendar-event', 'Mes réservations'],
+        '' => [
+            'dashboard'    => ['/user/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+            'services'     => ['/user/services.php', 'bi-search', 'Trouver un pro'],
+            'reservations' => ['/user/reservations.php', 'bi-calendar-event', 'Mes réservations'],
+        ],
     ],
     'professionnel' => [
-        'dashboard'    => ['/pro/pro-dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
-        'agenda'       => ['/pro/agenda.php', 'bi-calendar-week', 'Agenda'],
-        'profil'       => ['/pro/profil.php', 'bi-person-badge', 'Mon profil'],
-        'services'     => ['/pro/services.php', 'bi-tags', 'Services & tarifs'],
-        'ouverture'    => ['/pro/ouverture.php', 'bi-shop', "Horaires d'ouverture"],
-        'horaires'     => ['/pro/horaires.php', 'bi-calendar-plus', 'Disponibilités'],
-        'conges'       => ['/pro/conges.php', 'bi-airplane', 'Congés & fermetures'],
-        'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
-        'clients'      => ['/pro/clients.php', 'bi-people', 'Clients'],
-        'stats'        => ['/pro/stats.php', 'bi-graph-up-arrow', 'Statistiques'],
-        'partager'     => ['/pro/partager.php', 'bi-qr-code', 'Partager ma page'],
+        'Activité' => [
+            'dashboard'    => ['/pro/pro-dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+            'agenda'       => ['/pro/agenda.php', 'bi-calendar-week', 'Agenda'],
+            'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
+            'clients'      => ['/pro/clients.php', 'bi-people', 'Clients'],
+            'stats'        => ['/pro/stats.php', 'bi-graph-up-arrow', 'Statistiques'],
+        ],
+        'Ma vitrine' => [
+            'profil'       => ['/pro/profil.php', 'bi-person-badge', 'Mon profil'],
+            'services'     => ['/pro/services.php', 'bi-tags', 'Services & tarifs'],
+            'partager'     => ['/pro/partager.php', 'bi-qr-code', 'Partager ma page'],
+            'page'         => ['/user/pro.php?id=' . $userId, 'bi-box-arrow-up-right', 'Voir ma page publique'],
+        ],
+        'Organisation' => [
+            'ouverture'    => ['/pro/ouverture.php', 'bi-shop', "Horaires d'ouverture"],
+            'horaires'     => ['/pro/horaires.php', 'bi-calendar-plus', 'Disponibilités'],
+            'conges'       => ['/pro/conges.php', 'bi-airplane', 'Congés & fermetures'],
+        ],
     ],
     'admin' => [
-        'dashboard'    => ['/admin/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
-        'users'        => ['/admin/users.php', 'bi-people', 'Utilisateurs'],
+        '' => [
+            'dashboard'    => ['/admin/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+            'users'        => ['/admin/users.php', 'bi-people', 'Utilisateurs'],
+            'avis'         => ['/admin/avis.php', 'bi-chat-square-quote', 'Avis'],
+        ],
     ],
 ];
 
-$menu = $menus[$role] ?? [];
+// Barre d'onglets en bas de l'écran sur mobile (les essentiels)
+$onglets = [
+    'client'        => ['dashboard' => ['/user/dashboard.php', 'bi-grid-1x2', 'Accueil'], 'services' => ['/user/services.php', 'bi-search', 'Rechercher'], 'reservations' => ['/user/reservations.php', 'bi-calendar-event', 'Mes RDV']],
+    'professionnel' => ['dashboard' => ['/pro/pro-dashboard.php', 'bi-grid-1x2', 'Accueil'], 'agenda' => ['/pro/agenda.php', 'bi-calendar-week', 'Agenda'], 'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'RDV', $aTraiter], 'clients' => ['/pro/clients.php', 'bi-people', 'Clients']],
+    'admin'         => ['dashboard' => ['/admin/dashboard.php', 'bi-grid-1x2', 'Accueil'], 'users' => ['/admin/users.php', 'bi-people', 'Comptes'], 'avis' => ['/admin/avis.php', 'bi-chat-square-quote', 'Avis']],
+][$role] ?? [];
+
+$sections = $menus[$role] ?? [];
 $active = $active ?? '';
 $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admin' => 'Administrateur'];
+
+// Application installable : pro et client ont chacun la leur
+$app = ['professionnel' => 'pro', 'client' => 'user'][$role] ?? null;
+if ($app) {
+    require_once __DIR__ . "/webpush.php";
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -58,7 +88,7 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
 <head>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title><?= e($pageTitle ?? 'Mon espace') ?> - BookPro</title>
 
@@ -71,22 +101,21 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
 
     <link rel="icon" type="image/png" href="<?= BASE_URL ?>/assets/icons/favicon.png">
 
-    <?php if ($role === 'professionnel'): ?>
-        <!-- Application pro installable (PWA) -->
-        <?php require_once __DIR__ . "/webpush.php"; ?>
-        <link rel="manifest" href="<?= BASE_URL ?>/pro/manifest.json">
+    <?php if ($app): ?>
+        <!-- Application installable (PWA) -->
+        <link rel="manifest" href="<?= BASE_URL ?>/<?= $app ?>/manifest.json">
         <meta name="theme-color" content="#16123a">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="BookPro Pro">
+        <meta name="apple-mobile-web-app-title" content="<?= $app === 'pro' ? 'BookPro Pro' : 'BookPro' ?>">
         <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icons/apple-touch-icon.png">
         <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
     <?php endif; ?>
 
 </head>
 
-<body data-base="<?= BASE_URL ?>" <?= $role === 'professionnel' ? 'data-vapid="' . e(vapid_public_key()) . '"' : '' ?>>
+<body data-base="<?= BASE_URL ?>" <?= $app ? 'data-app="' . $app . '" data-vapid="' . e(vapid_public_key()) . '"' : '' ?>>
 
 <div class="app-shell">
 
@@ -109,19 +138,23 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
 
         <nav class="app-menu">
 
-            <?php foreach ($menu as $key => $item): ?>
-                <?php [$href, $icon, $label] = $item; $count = $item[3] ?? 0; ?>
-                <a href="<?= BASE_URL . $href ?>" class="<?= $key === $active ? 'active' : '' ?>">
-                    <i class="bi <?= $icon ?>"></i> <?= e($label) ?>
-                    <?php if ($count > 0): ?><span class="menu-count"><?= $count ?></span><?php endif; ?>
-                </a>
-            <?php endforeach; ?>
+            <a href="<?= BASE_URL ?>/index.php"><i class="bi bi-house"></i> Accueil du site</a>
 
-            <?php if ($role === 'professionnel'): ?>
-                <a href="<?= BASE_URL ?>/user/pro.php?id=<?= (int) $_SESSION['user_id'] ?>" target="_blank">
-                    <i class="bi bi-box-arrow-up-right"></i> Voir ma page publique
-                </a>
-            <?php endif; ?>
+            <?php foreach ($sections as $titre => $items): ?>
+
+                <?php if ($titre !== ''): ?>
+                    <div class="app-menu-title"><?= e($titre) ?></div>
+                <?php endif; ?>
+
+                <?php foreach ($items as $key => $item): ?>
+                    <?php [$href, $icon, $label] = $item; $count = $item[3] ?? 0; ?>
+                    <a href="<?= BASE_URL . $href ?>" class="<?= $key === $active ? 'active' : '' ?>" <?= $key === 'page' ? 'target="_blank"' : '' ?>>
+                        <i class="bi <?= $icon ?>"></i> <?= e($label) ?>
+                        <?php if ($count > 0): ?><span class="menu-count"><?= $count ?></span><?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
+
+            <?php endforeach; ?>
 
         </nav>
 
@@ -132,6 +165,22 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
     </aside>
 
     <!-- ======================================================
+    BARRE D'ONGLETS (mobile)
+    ====================================================== -->
+    <nav class="app-tabbar" aria-label="Navigation principale">
+        <?php foreach ($onglets as $key => $item): ?>
+            <?php [$href, $icon, $label] = $item; $count = $item[3] ?? 0; ?>
+            <a href="<?= BASE_URL . $href ?>" class="<?= $key === $active ? 'active' : '' ?>">
+                <span class="position-relative"><i class="bi <?= $icon ?>"></i><?php if ($count > 0): ?><span class="tab-count"><?= $count ?></span><?php endif; ?></span>
+                <?= e($label) ?>
+            </a>
+        <?php endforeach; ?>
+        <button type="button" class="app-burger-tab">
+            <i class="bi bi-list"></i> Menu
+        </button>
+    </nav>
+
+    <!-- ======================================================
     CONTENU
     ====================================================== -->
     <main class="app-content">
@@ -139,7 +188,7 @@ $libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admi
         <div class="app-topbar">
 
             <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-soft app-burger" type="button" aria-label="Menu"><i class="bi bi-list"></i></button>
+                <a href="<?= BASE_URL ?>/index.php" class="btn btn-soft app-home-mobile" aria-label="Accueil du site"><i class="bi bi-house"></i></a>
                 <div>
                     <h1><?= e($pageTitle ?? '') ?></h1>
                     <?php if (!empty($pageSubtitle)): ?><p class="text-muted mb-0"><?= e($pageSubtitle) ?></p><?php endif; ?>

@@ -54,7 +54,7 @@ if (!flock($verrou, LOCK_EX | LOCK_NB)) {
 
 $stmt = $pdo->prepare("
     SELECT r.id, d.date_disponible, d.heure_debut, d.heure_fin, s.nom_service, s.prix,
-           c.nom AS client, c.email AS client_email,
+           c.id AS client_id, c.nom AS client, c.email AS client_email,
            p.nom AS pro, p.entreprise, p.telephone AS pro_tel, p.adresse, p.code_postal, p.ville
     FROM reservations r
     JOIN disponibilites d ON r.disponibilite_id = d.id
@@ -96,6 +96,14 @@ foreach ($stmt->fetchAll() as $r) {
         . "À demain !\nL'équipe BookPro";
 
     sendMail($r['client_email'], "Rappel : votre rendez-vous de demain à " . heure($r['heure_debut']), $message);
+
+    // Et sur l'application du client
+    notifier_utilisateur($pdo, $r['client_id'], [
+        'tag'   => 'rappel-' . $r['id'],
+        'title' => 'Demain à ' . heure($r['heure_debut']) . ' : ' . $r['nom_service'],
+        'body'  => $chez . ($adresse ? ' · ' . $adresse : ''),
+        'url'   => BASE_URL . '/user/reservations.php',
+    ]);
     $envoyes++;
 }
 

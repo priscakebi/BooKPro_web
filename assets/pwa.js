@@ -1,39 +1,44 @@
 // ======================================================
-// APPLICATION PRO (PWA)
+// APPLICATIONS BOOKPRO (PWA) : socle commun pro + client
+// - service worker de l'application (pro/ ou user/)
 // - installation sur l'écran d'accueil
 // - notifications push (activation / désactivation)
-// - alertes en direct dans la page + confirmation en un geste
+// - petits messages (toasts) : window.bpToast(titre, texte, type)
 // ======================================================
 
 (() => {
 
     const body = document.body;
     const BASE = body.dataset.base || "";
+    const APP = body.dataset.app;               // "pro" ou "user"
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || "";
     const VAPID = body.dataset.vapid || "";
 
+    if (!APP) return;
+
     const pushDispo = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    const estInstallee = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const estIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     let swReg = null;
 
     // ==================================================
     // SERVICE WORKER
     // ==================================================
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register(BASE + "/pro/sw.js", { scope: BASE + "/pro/" })
-            .then((reg) => { swReg = reg; majEtatPush(); })
+        navigator.serviceWorker.register(BASE + "/" + APP + "/sw.js", { scope: BASE + "/" + APP + "/" })
+            .then((reg) => { swReg = reg; window.bpSw = reg; majEtatPush(); })
             .catch((e) => console.warn("Service worker :", e));
 
+        // Le service worker signale un changement (notification reçue, action faite)
         navigator.serviceWorker.addEventListener("message", (e) => {
-            if (e.data?.type === "maj") verifierDemandes();
+            if (e.data?.type === "maj") document.dispatchEvent(new CustomEvent("bp:maj"));
         });
     }
 
     // ==================================================
-    // INSTALLATION DE L'APPLICATION
+    // INSTALLATION
     // ==================================================
     let invite = null;
-    const estInstallee = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-    const estIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
     window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
@@ -57,8 +62,6 @@
         });
     });
 
-    document.querySelectorAll("[data-app-installed]").forEach((el) => el.classList.toggle("d-none", !estInstallee));
-
     // ==================================================
     // NOTIFICATIONS PUSH
     // ==================================================
@@ -68,7 +71,7 @@
     }
 
     async function envoyerAbonnement(action, abonnement) {
-        const r = await fetch(BASE + "/pro/api/push.php", {
+        const r = await fetch(BASE + "/api/push.php", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF },
@@ -89,7 +92,9 @@
         const abonnement = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cleVapid() });
         await envoyerAbonnement("subscribe", abonnement);
 
-        toast("Notifications activées", "Vous serez prévenu à chaque nouvelle demande, même application fermée.", "success");
+        toast("Notifications activées", APP === "pro"
+            ? "Vous serez prévenu à chaque nouvelle demande, même application fermée."
+            : "Vous serez prévenu dès qu'un professionnel répond, et la veille de vos rendez-vous.", "success");
     }
 
     async function desactiverPush() {
@@ -117,11 +122,12 @@
         }
 
         const reg = swReg || await navigator.serviceWorker.ready;
-        const actif = !!(await reg.pushManager.getSubscription()) && Notification.permission === "granted";
+        const abonnement = await reg.pushManager.getSubscription();
+        const actif = !!abonnement && Notification.permission === "granted";
 
         // Réenregistre l'appareil côté serveur (ex : après une reconnexion)
         if (actif) {
-            reg.pushManager.getSubscription().then((a) => a && envoyerAbonnement("subscribe", a).catch(() => {}));
+            envoyerAbonnement("subscribe", abonnement).catch(() => {});
         }
 
         boutons.forEach((b) => {
@@ -155,91 +161,10 @@
     });
 
     // ==================================================
-    // ALERTES EN DIRECT (vérification toutes les 30 s)
-    // ==================================================
-    const CLE_VUES = "bookpro-demandes-vues";
-    let premiereVerif = true;
-
-    async function verifierDemandes() {
-        let data;
-
-        try {
-            const r = await fetch(BASE + "/pro/api/attente.php", { credentials: "same-origin", cache: "no-store" });
-            if (!r.ok) return;
-            data = await r.json();
-        } catch (e) {
-            return; // hors ligne : on réessaiera
-        }
-
-        // Pastille du menu "Réservations"
-        const lien = document.querySelector('.app-menu a[href$="/pro/rdv.php"]');
-        if (lien) {
-            let pastille = lien.querySelector(".menu-count");
-            if (data.total > 0 && !pastille) {
-                pastille = document.createElement("span");
-                pastille.className = "menu-count";
-                lien.appendChild(pastille);
-            }
-            if (pastille) data.total > 0 ? pastille.textContent = data.total : pastille.remove();
-        }
-
-        const vues = new Set(JSON.parse(localStorage.getItem(CLE_VUES) || "[]"));
-        const nouvelles = data.demandes.filter((d) => !vues.has(d.id));
-
-        // Au premier chargement, on mémorise sans alerter (la page les affiche déjà)
-        if (!premiereVerif) {
-            nouvelles.forEach(afficherDemande);
-        }
-
-        premiereVerif = false;
-        localStorage.setItem(CLE_VUES, JSON.stringify(data.demandes.map((d) => d.id)));
-    }
-
-    function afficherDemande(d) {
-        const t = toast(d.title, d.body, "demande", [
-            { label: "Confirmer", style: "btn-success", action: "confirmer" },
-            { label: "Refuser", style: "btn-outline-danger", action: "refuser" },
-        ], d);
-
-        // Application en arrière-plan sans push : notification système
-        if (document.hidden && Notification.permission === "granted" && swReg) {
-            swReg.pushManager.getSubscription().then((abonne) => {
-                if (!abonne) swReg.showNotification(d.title, {
-                    body: d.body, tag: d.tag, data: d, icon: BASE + "/assets/icons/icon-192.png",
-                    actions: [{ action: "confirmer", title: "✓ Confirmer" }, { action: "refuser", title: "✕ Refuser" }],
-                });
-            });
-        }
-
-        return t;
-    }
-
-    async function agir(d, action, toastEl) {
-        toastEl.querySelectorAll("button").forEach((b) => b.disabled = true);
-
-        const r = await fetch(BASE + "/pro/api/action.php", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: d.id, action, jeton: d.actions[action] }),
-        });
-        const res = await r.json().catch(() => ({}));
-
-        toastEl.remove();
-        toast(res.ok ? res.message : "Action impossible", res.ok ? "" : (res.message || ""), res.ok ? "success" : "danger");
-
-        // Les pages qui listent les réservations se mettent à jour
-        if (res.ok && /\/pro\/(agenda|rdv|pro-dashboard)\.php/.test(location.pathname)) {
-            setTimeout(() => location.reload(), 900);
-        } else {
-            verifierDemandes();
-        }
-    }
-
-    // ==================================================
     // TOASTS (empilés en bas à droite)
+    // boutons : [{ label, style, onClick(toastEl) }]
     // ==================================================
-    function toast(titre, texte, type = "info", boutons = [], donnees = null) {
+    function toast(titre, texte, type = "info", boutons = [], lien = null) {
         let zone = document.querySelector(".bp-toasts");
         if (!zone) {
             zone = document.createElement("div");
@@ -268,26 +193,24 @@
             const btn = document.createElement("button");
             btn.className = "btn btn-sm " + b.style;
             btn.textContent = b.label;
-            btn.addEventListener("click", () => agir(donnees, b.action, el));
+            btn.addEventListener("click", () => b.onClick(el));
             el.querySelector(".bp-toast-actions").appendChild(btn);
         });
 
-        if (donnees?.url) {
+        if (lien) {
             el.querySelector("strong").style.cursor = "pointer";
-            el.querySelector("strong").addEventListener("click", () => location.href = donnees.url);
+            el.querySelector("strong").addEventListener("click", () => location.href = lien);
         }
 
         el.querySelector(".btn-close").addEventListener("click", () => el.remove());
         zone.appendChild(el);
 
-        // Les demandes restent affichées ; les messages simples disparaissent
+        // Les messages avec actions restent affichés ; les autres disparaissent
         if (!boutons.length) setTimeout(() => el.remove(), 6000);
 
         return el;
     }
 
-    verifierDemandes();
-    setInterval(verifierDemandes, 30000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) verifierDemandes(); });
+    window.bpToast = toast;
 
 })();

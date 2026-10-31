@@ -205,4 +205,16 @@ include("../includes/dash_header.php");
 
 <?php endif; ?>
 
+<script>
+// Arrivée par "Noter" (#avisID) : ouvre le formulaire d'avis et le montre
+document.addEventListener("DOMContentLoaded", () => {
+    const cible = location.hash.match(/^#avis(\d+)$/) && document.getElementById(location.hash.slice(1));
+    if (cible) {
+        bootstrap.Collapse.getOrCreateInstance(cible).show();
+        cible.scrollIntoView({ behavior: "smooth", block: "center" });
+        cible.querySelector("input[name=commentaire]")?.focus();
+    }
+});
+</script>
+
 <?php include("../includes/dash_footer.php"); ?>

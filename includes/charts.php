@@ -39,7 +39,7 @@ function nombre_compact($n)
 // $points : [['label' => 'janv.', 'valeur' => 120, 'tip' => 'janv. 2026', 'attenue' => false], ...]
 // $format : fonction d'affichage des valeurs
 // ======================================================
-function chart_colonnes(array $points, callable $format, $titreTableau, $unite = '')
+function chart_colonnes(array $points, callable $format, $titreTableau, $unite = '', $maxEtiquettes = 12)
 {
     $max = max(array_column($points, 'valeur') ?: [0]);
     [$haut, $pas] = axe_propre($max);
@@ -49,7 +49,7 @@ function chart_colonnes(array $points, callable $format, $titreTableau, $unite =
     $iDernier = count($points) - 1;
 
     // Axe X : au plus ~12 étiquettes pour éviter les chevauchements
-    $tous = max(1, (int) ceil(count($points) / 12));
+    $tous = max(1, (int) ceil(count($points) / $maxEtiquettes));
 
     ob_start();
     ?>

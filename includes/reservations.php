@@ -28,11 +28,12 @@ function changer_statut_pro(PDO $pdo, $proId, $resaId, $action)
 
     // Uniquement une réservation d'un service du pro, à venir, dans le bon statut
     $stmt = $pdo->prepare("
-        SELECT r.id, u.email, s.nom_service, d.date_disponible, d.heure_debut
+        SELECT r.id, r.user_id AS client_id, u.email, s.nom_service, d.date_disponible, d.heure_debut, p.entreprise, p.nom AS pro
         FROM reservations r
         JOIN disponibilites d ON r.disponibilite_id = d.id
         JOIN services s ON d.service_id = s.id
         JOIN users u ON r.user_id = u.id
+        JOIN users p ON s.user_id = p.id
         WHERE r.id = ? AND s.user_id = ? AND r.statut = ?
           AND d.date_disponible >= CURDATE()
     ");
@@ -54,6 +55,22 @@ function changer_statut_pro(PDO $pdo, $proId, $resaId, $action)
         "Votre réservation « {$resa['nom_service']} » du " . date_fr($resa['date_disponible'])
             . " à " . heure($resa['heure_debut']) . " a été " . $libelles[$apres] . "."
     );
+
+    // Notification sur l'application du client
+    $titres = [
+        'confirmee' => 'Rendez-vous confirmé ✓',
+        'refusee'   => 'Demande non acceptée',
+        'annulee'   => 'Rendez-vous annulé',
+    ];
+
+    notifier_utilisateur($pdo, $resa['client_id'], [
+        'tag'   => 'resa-' . $resa['id'],
+        'title' => $titres[$apres],
+        'body'  => ($resa['entreprise'] ?: $resa['pro']) . ' · ' . $resa['nom_service'] . ' · '
+                   . jour_court($resa['date_disponible']) . ' à ' . heure($resa['heure_debut'])
+                   . ($apres === 'confirmee' ? '' : ' · Choisissez un autre créneau'),
+        'url'   => BASE_URL . '/user/reservations.php',
+    ]);
 
     return [true, "Réservation " . $libelles[$apres] . "."];
 }

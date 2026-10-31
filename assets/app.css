@@ -1355,3 +1355,151 @@ td.text-capitalize-first, div.text-capitalize-first, li.text-capitalize-first { 
 
     @page { margin: 1.5cm; }
 }
+
+/* ======================================================
+   MENU LATÉRAL : RUBRIQUES + BARRE D'ONGLETS MOBILE
+====================================================== */
+
+.app-menu-title {
+    margin: 1.1rem .9rem .35rem;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .4);
+}
+
+.app-tabbar, .app-home-mobile { display: none; }
+
+@media (max-width: 991px) {
+
+    .app-home-mobile { display: inline-flex; }
+
+    .app-tabbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1035;
+        display: flex;
+        background: rgba(255, 255, 255, .94);
+        backdrop-filter: saturate(180%) blur(14px);
+        -webkit-backdrop-filter: saturate(180%) blur(14px);
+        border-top: 1px solid var(--bp-border);
+        padding: .35rem .25rem calc(.35rem + env(safe-area-inset-bottom));
+    }
+
+    .app-tabbar a, .app-tabbar button {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        font-size: .68rem;
+        font-weight: 600;
+        color: var(--bp-muted);
+        text-decoration: none;
+        background: none;
+        border: 0;
+        padding: .25rem 0;
+    }
+
+    .app-tabbar i { font-size: 1.35rem; line-height: 1; }
+
+    .app-tabbar a.active { color: var(--bp-primary); }
+
+    .app-tabbar a.active i { transform: translateY(-1px); }
+
+    .tab-count {
+        position: absolute;
+        top: -4px;
+        right: -10px;
+        background: #ff5a7a;
+        color: #fff;
+        border-radius: 999px;
+        font-size: .6rem;
+        padding: 0 .35rem;
+        line-height: 1.4;
+    }
+
+    /* Le contenu ne passe pas sous la barre d'onglets */
+    .app-content { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+
+    .bp-toasts { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+}
+
+/* ======================================================
+   TABLEAUX DE BORD : programme du jour, raccourcis
+====================================================== */
+
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: .9rem;
+    padding: .65rem .5rem;
+    border-radius: 12px;
+    color: var(--bp-ink);
+    text-decoration: none;
+    position: relative;
+}
+
+.timeline-item:hover { background: #fafaff; color: var(--bp-ink); }
+
+.timeline-heure { width: 46px; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 1px; }
+
+.timeline-point {
+    width: 12px;
+    height: 12px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--bp-primary);
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Trait vertical qui relie les points */
+.timeline-item:not(:last-child) .timeline-point::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 12px;
+    width: 2px;
+    height: 46px;
+    transform: translateX(-50%);
+    background: var(--bp-border);
+}
+
+.timeline-item.fait { opacity: .5; }
+.timeline-item.fait .timeline-point { border-color: var(--bp-muted); background: var(--bp-muted); }
+.timeline-item.en-cours { background: var(--bp-primary-soft); }
+.timeline-item.en-cours .timeline-point { background: var(--bp-primary); box-shadow: 0 0 0 4px rgba(91, 78, 245, .2); }
+
+.raccourci {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    padding: 1rem .5rem;
+    border-radius: 14px;
+    background: var(--bp-bg);
+    color: var(--bp-ink);
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all .2s;
+}
+
+.raccourci i { font-size: 1.4rem; color: var(--bp-primary); }
+
+.raccourci:hover { background: var(--bp-primary-soft); color: var(--bp-primary); transform: translateY(-2px); }
+
+/* Graphique compact (tableaux de bord) */
+.viz-root.bp-card .viz-cols { height: 180px; }
+
+/* Utilitaires */
+.min-w-0 { min-width: 0; }
+.progress-ring { flex-shrink: 0; }
+.stat-value { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+.stat-label { color: var(--bp-muted); font-size: .88rem; font-weight: 500; }

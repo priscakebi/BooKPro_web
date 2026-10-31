@@ -143,7 +143,7 @@ function ev_data($ev)
 <!-- ======================================================
 CARTE APPLICATION (installation + notifications)
 ====================================================== -->
-<?php include("_app_card.php"); ?>
+<?php include("../includes/app_card.php"); ?>
 
 <!-- ======================================================
 À TRAITER

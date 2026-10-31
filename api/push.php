@@ -1,17 +1,40 @@
 <?php
 // ======================================================
 // ABONNEMENT / DÉSABONNEMENT AUX NOTIFICATIONS PUSH
+// Pour les applications pro et client.
 // POST { action: "subscribe" | "unsubscribe", subscription: {...} }
+// En-tête X-CSRF-Token obligatoire.
 // ======================================================
 
-require __DIR__ . "/_api.php";
+require_once __DIR__ . "/../includes/auth.php";
+require __DIR__ . "/../config/database.php";
+require_once __DIR__ . "/../includes/webpush.php";
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+
+function json_out($data, $code = 200)
+{
+    http_response_code($code);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+if (!in_array($_SESSION['role'] ?? '', ['professionnel', 'client'], true)) {
+    json_out(['erreur' => 'non_connecte'], 401);
+}
+
+$userId = (int) $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_out(['vapid' => vapid_public_key()]);
 }
 
-api_csrf_check();
+if (!hash_equals(csrf_token(), $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) {
+    json_out(['erreur' => 'csrf'], 400);
+}
 
+$entree = json_decode(file_get_contents('php://input'), true) ?: [];
 $sub = $entree['subscription'] ?? [];
 $endpoint = $sub['endpoint'] ?? '';
 $hash = hash('sha256', $endpoint);
@@ -22,7 +45,7 @@ if (!preg_match('#^https://[^\s]+$#', $endpoint) || strlen($endpoint) > 2000) {
 }
 
 if (($entree['action'] ?? '') === 'unsubscribe') {
-    $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint_hash = ? AND user_id = ?")->execute([$hash, $proId]);
+    $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint_hash = ? AND user_id = ?")->execute([$hash, $userId]);
     json_out(['ok' => true]);
 }
 
@@ -39,6 +62,6 @@ $pdo->prepare("
     INSERT INTO push_subscriptions (user_id, endpoint, endpoint_hash, p256dh, auth)
     VALUES (?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), p256dh = VALUES(p256dh), auth = VALUES(auth)
-")->execute([$proId, $endpoint, $hash, $p256dh, $auth]);
+")->execute([$userId, $endpoint, $hash, $p256dh, $auth]);
 
 json_out(['ok' => true]);

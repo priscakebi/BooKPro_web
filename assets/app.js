@@ -91,14 +91,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==================================================
     // SIDEBAR MOBILE
     // ==================================================
-    const burger = document.querySelector(".app-burger");
+    const burgers = document.querySelectorAll(".app-burger, .app-burger-tab");
     const sidebar = document.querySelector(".app-sidebar");
 
-    if (burger && sidebar) {
-        burger.addEventListener("click", () => sidebar.classList.toggle("open"));
+    if (burgers.length && sidebar) {
+        burgers.forEach((b) => b.addEventListener("click", () => sidebar.classList.toggle("open")));
 
         document.addEventListener("click", (e) => {
-            if (!sidebar.contains(e.target) && !burger.contains(e.target)) {
+            if (!sidebar.contains(e.target) && ![...burgers].some((b) => b.contains(e.target))) {
                 sidebar.classList.remove("open");
             }
         });
