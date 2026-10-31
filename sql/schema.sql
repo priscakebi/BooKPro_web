@@ -183,12 +183,26 @@ CREATE TABLE `users` (
   `adresse` varchar(255) DEFAULT NULL,
   `code_postal` varchar(10) DEFAULT NULL,
   `photo` varchar(255) DEFAULT NULL,
+  `slug` varchar(60) DEFAULT NULL,
   `rappels_clients` tinyint(1) NOT NULL DEFAULT '1',
   `password` varchar(255) NOT NULL,
   `role` enum('admin','client','professionnel') NOT NULL DEFAULT 'client',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `slug` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `vues_pro`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vues_pro` (
+  `pro_id` int NOT NULL,
+  `jour` date NOT NULL,
+  `source` enum('qr','lien','site','bouton') NOT NULL,
+  `nb` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`pro_id`,`jour`,`source`),
+  CONSTRAINT `fk_vues_pro` FOREIGN KEY (`pro_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

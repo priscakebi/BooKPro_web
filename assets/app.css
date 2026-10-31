@@ -1122,3 +1122,66 @@ h1, h2, h3, h4, h5 {
 .text-capitalize-first { display: inline-block; }
 .text-capitalize-first::first-letter { text-transform: uppercase; }
 td.text-capitalize-first, div.text-capitalize-first, li.text-capitalize-first { display: revert; }
+
+/* ======================================================
+   AFFICHETTE QR CODE (écran + impression)
+====================================================== */
+
+.affiche {
+    background: #fff;
+    border-radius: 24px;
+    overflow: hidden;
+    text-align: center;
+    box-shadow: var(--bp-shadow-lg);
+    border: 1px solid var(--bp-border);
+}
+
+.affiche-haut {
+    background: var(--bp-gradient);
+    color: #fff;
+    padding: 1.8rem 1rem 3.5rem;
+}
+
+.affiche-haut .avatar { border: 4px solid #fff; }
+
+.affiche-qr {
+    width: 220px;
+    height: 220px;
+    margin: -2.5rem auto 1rem;
+    background: #fff;
+    border-radius: 18px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(15, 18, 37, .15);
+    position: relative;
+}
+
+.affiche-qr svg, #qr svg { width: 100%; height: 100%; display: block; }
+
+.affiche-titre { font-size: 1.6rem; font-weight: 800; line-height: 1.15; margin-bottom: .5rem; }
+
+.affiche-etapes { color: var(--bp-muted); font-size: .9rem; margin-bottom: .5rem; }
+
+.affiche-url { font-weight: 700; color: var(--bp-primary); padding-bottom: 1.5rem; margin: 0; word-break: break-all; padding-inline: 1rem; }
+
+/* Impression : uniquement l'affichette, centrée sur la page */
+@media print {
+    body * { visibility: hidden; }
+
+    .affiche, .affiche * { visibility: visible; }
+
+    .affiche {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        transform: translateX(-50%);
+        width: 13cm;
+        box-shadow: none;
+        border: 1px solid #ddd;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .affiche-haut { animation: none; }
+
+    @page { margin: 1.5cm; }
+}

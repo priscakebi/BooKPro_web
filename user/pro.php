@@ -7,20 +7,28 @@ require_once("../includes/auth.php");
 require("../config/database.php");
 require("../includes/pros.php");
 require_once("../includes/conges.php");
+require_once("../includes/partage.php");
 
-$id = (int) ($_GET['id'] ?? 0);
+// Accès par lien court (/p/mon-entreprise) ou par identifiant (?id=)
+$slug = $_GET['slug'] ?? null;
 
 $stmt = $pdo->prepare("
-    SELECT id, nom, entreprise, metier, ville, adresse, code_postal, telephone, description, photo, created_at
-    FROM users WHERE id = ? AND role = 'professionnel'
+    SELECT id, nom, entreprise, metier, ville, adresse, code_postal, telephone, description, photo, slug, created_at
+    FROM users WHERE " . ($slug !== null ? "slug = ?" : "id = ?") . " AND role = 'professionnel'
 ");
-$stmt->execute([$id]);
+$stmt->execute([$slug ?? (int) ($_GET['id'] ?? 0)]);
 $pro = $stmt->fetch();
 
 if (!$pro) {
     flash("Ce professionnel n'existe pas.", "warning");
     redirect("/user/services.php");
 }
+
+$id = (int) $pro['id'];
+
+// Provenance de la visite (?src=qr, lien, bouton ; sinon recherche BookPro)
+$source = $_GET['src'] ?? ($slug !== null ? 'lien' : 'site');
+compter_visite($pdo, $id, $source);
 
 // ======================================================
 // SERVICES + NOTE PAR SERVICE
@@ -188,7 +196,7 @@ include("../includes/public_header.php");
                         <div class="text-end">
                             <div class="service-price"><?= prix($s['prix']) ?></div>
                             <?php if ($s['libres'] > 0): ?>
-                                <a href="?id=<?= $id ?>&service=<?= (int) $s['id'] ?>#reserver" class="btn btn-sm <?= (int) $s['id'] === $serviceId ? 'btn-primary' : 'btn-soft' ?> mt-1">Choisir</a>
+                                <a href="<?= BASE_URL ?>/user/pro.php?id=<?= $id ?>&service=<?= (int) $s['id'] ?>#reserver" class="btn btn-sm <?= (int) $s['id'] === $serviceId ? 'btn-primary' : 'btn-soft' ?> mt-1">Choisir</a>
                             <?php else: ?>
                                 <small class="text-muted">Complet</small>
                             <?php endif; ?>
@@ -243,7 +251,7 @@ include("../includes/public_header.php");
                                 <?php foreach ($creneaux as $c): ?>
 
                                     <?php if ($estClient): ?>
-                                        <form method="POST" action="prendre_rdv.php"
+                                        <form method="POST" action="<?= BASE_URL ?>/user/prendre_rdv.php"
                                               onsubmit="return confirm('Réserver le <?= e(jour_court($date)) ?> à <?= heure($c['heure_debut']) ?> ?');">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="disponibilite_id" value="<?= (int) $c['id'] ?>">

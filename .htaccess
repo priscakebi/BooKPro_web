@@ -1,0 +1,11 @@
+# ======================================================
+# LIENS COURTS DES PROFESSIONNELS : /p/dupont-plomberie
+# ======================================================
+RewriteEngine On
+
+RewriteRule ^p/([a-z0-9-]+)/?$ user/pro.php?slug=$1 [L,QSA]
+
+# Les fichiers sensibles ne sont jamais servis
+<FilesMatch "\.(sql|log|bat)$">
+    Require all denied
+</FilesMatch>
