@@ -10,6 +10,7 @@ require_login('professionnel');
 
 require("../config/database.php");
 require("../includes/reservations.php");
+require_once("../includes/clients.php");
 require_once("../includes/conges.php");
 
 $proId = $_SESSION['user_id'];
@@ -37,7 +38,7 @@ $retour = '/pro/agenda.php?semaine=' . $lundi;
 $stmt = $pdo->prepare("
     SELECT d.id AS dispo_id, d.date_disponible, d.heure_debut, d.heure_fin,
            s.nom_service, s.prix,
-           r.id AS resa_id, r.statut, u.nom AS client, u.telephone, u.email
+           r.id AS resa_id, r.statut, u.id AS client_id, u.nom AS client, u.telephone, u.email
     FROM disponibilites d
     JOIN services s ON d.service_id = s.id
     LEFT JOIN reservations r ON r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL
@@ -93,6 +94,9 @@ $aTraiterListe = demandes_en_attente($pdo, $proId, 20);
 // Congés / fermetures de la semaine
 $conges = conges_periode($pdo, $proId, $lundi, $dimanche);
 
+// Fiches clients (visites, notes) pour la fenêtre de détail
+$fiches = array_column(clients_du_pro($pdo, $proId), null, 'id');
+
 // Chiffres de la semaine
 $nbConfirmes = 0;
 $caSemaine = 0;
@@ -127,6 +131,9 @@ function ev_data($ev)
         'quand'   => jour_court($ev['date_disponible']) . ' · ' . heure($ev['heure_debut']) . ' - ' . heure($ev['heure_fin']),
         'service' => $ev['nom_service'] . ' · ' . prix($ev['prix']),
         'client'  => $ev['client'],
+        'fiche'   => $ev['client_id'] ? BASE_URL . '/pro/client.php?id=' . (int) $ev['client_id'] : null,
+        'visites' => (int) ($GLOBALS['fiches'][$ev['client_id']]['visites'] ?? 0),
+        'note'    => mb_strimwidth($GLOBALS['fiches'][$ev['client_id']]['note'] ?? '', 0, 160, '…'),
         'tel'     => $ev['telephone'],
         'email'   => $ev['email'],
     ], JSON_UNESCAPED_UNICODE));
@@ -149,7 +156,7 @@ CARTE APPLICATION (installation + notifications)
     <?php foreach ($aTraiterListe as $d): ?>
         <div class="d-flex flex-wrap align-items-center gap-3 py-2 border-bottom" id="resa-<?= (int) $d['id'] ?>">
             <div class="flex-grow-1">
-                <strong><?= e($d['client']) ?></strong> · <?= e($d['nom_service']) ?>
+                <a href="client.php?id=<?= (int) $d['client_id'] ?>" class="fw-bold text-decoration-none"><?= e($d['client']) ?></a> · <?= e($d['nom_service']) ?>
                 <div class="small text-muted text-capitalize-first"><?= e(jour_court($d['date_disponible'])) ?> · <?= heure($d['heure_debut']) ?> - <?= heure($d['heure_fin']) ?> · <?= prix($d['prix']) ?></div>
             </div>
             <div class="d-flex gap-2">
@@ -361,6 +368,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 a.append(val);
                 client.append(a);
             });
+
+            // Historique et notes privées du pro sur ce client
+            const infos = document.createElement("div");
+            infos.className = "small mt-2 pt-2 border-top";
+            infos.textContent = ev.visites ? `${ev.visites} visite${ev.visites > 1 ? "s" : ""} honorée${ev.visites > 1 ? "s" : ""}` : "Premier rendez-vous";
+            client.append(infos);
+
+            if (ev.note) {
+                const note = document.createElement("div");
+                note.className = "small fst-italic mt-1";
+                note.textContent = "📝 " + ev.note;
+                client.append(note);
+            }
+
+            const fiche = document.createElement("a");
+            fiche.href = ev.fiche;
+            fiche.className = "btn btn-soft btn-sm mt-2";
+            fiche.textContent = "Voir la fiche client";
+            client.append(fiche);
         }
 
         // Actions possibles selon l'état

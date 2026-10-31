@@ -38,6 +38,7 @@ $menus = [
         'horaires'     => ['/pro/horaires.php', 'bi-calendar-plus', 'Disponibilités'],
         'conges'       => ['/pro/conges.php', 'bi-airplane', 'Congés & fermetures'],
         'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
+        'clients'      => ['/pro/clients.php', 'bi-people', 'Clients'],
     ],
     'admin' => [
         'dashboard'    => ['/admin/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],

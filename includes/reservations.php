@@ -43,7 +43,8 @@ function changer_statut_pro(PDO $pdo, $proId, $resaId, $action)
         return [false, "Action impossible : la réservation a peut-être déjà été traitée."];
     }
 
-    $pdo->prepare("UPDATE reservations SET statut = ? WHERE id = ?")->execute([$apres, $resa['id']]);
+    $pdo->prepare("UPDATE reservations SET statut = ?, annule_par = ? WHERE id = ?")
+        ->execute([$apres, $apres === 'annulee' ? 'pro' : null, $resa['id']]);
 
     $libelles = ['confirmee' => 'confirmée', 'refusee' => 'refusée', 'annulee' => 'annulée'];
 
@@ -77,7 +78,7 @@ function jeton_action_valide($jeton, $resaId, $action, $proId)
 function demandes_en_attente(PDO $pdo, $proId, $limit = 10)
 {
     $stmt = $pdo->prepare("
-        SELECT r.id, r.created_at, d.date_disponible, d.heure_debut, d.heure_fin,
+        SELECT r.id, r.created_at, r.user_id AS client_id, d.date_disponible, d.heure_debut, d.heure_fin,
                s.nom_service, s.prix, u.nom AS client
         FROM reservations r
         JOIN disponibilites d ON r.disponibilite_id = d.id

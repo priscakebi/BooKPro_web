@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             UPDATE reservations r
             JOIN disponibilites d ON r.disponibilite_id = d.id
-            SET r.statut = 'annulee'
+            SET r.statut = 'annulee', r.annule_par = 'client'
             WHERE r.id = ? AND r.user_id = ?
               AND r.statut IN ('en_attente', 'confirmee')
               AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()

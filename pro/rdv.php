@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 $stmt = $pdo->prepare("
 
     SELECT r.id, r.statut, d.date_disponible, d.heure_debut, d.heure_fin,
-           s.nom_service, u.nom AS client, u.email, u.telephone,
+           s.nom_service, r.user_id AS client_id, u.nom AS client, u.email, u.telephone,
            (d.date_disponible >= CURDATE()) AS a_venir
     FROM reservations r
     JOIN disponibilites d ON r.disponibilite_id = d.id
@@ -84,7 +84,7 @@ include("../includes/dash_header.php");
                 <td><?= e($r['nom_service']) ?></td>
 
                 <td>
-                    <?= e($r['client']) ?><br>
+                    <a href="client.php?id=<?= (int) $r['client_id'] ?>" class="fw-semibold text-decoration-none"><?= e($r['client']) ?></a><br>
                     <small><?= e($r['email']) ?> <?= e($r['telephone']) ?></small>
                 </td>
 

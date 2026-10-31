@@ -70,7 +70,7 @@ $caMois = $stmt->fetchColumn();
 
 $stmt = $pdo->prepare("
     SELECT r.statut, d.date_disponible, d.heure_debut, d.heure_fin,
-           s.nom_service, s.prix, u.nom AS client
+           s.nom_service, s.prix, r.user_id AS client_id, u.nom AS client
     FROM reservations r
     JOIN disponibilites d ON r.disponibilite_id = d.id
     JOIN services s ON d.service_id = s.id
@@ -182,7 +182,7 @@ PROCHAINES RÉSERVATIONS
                     <td class="fw-semibold text-capitalize-first"><?= e(jour_court($r['date_disponible'])) ?></td>
                     <td><?= heure($r['heure_debut']) ?> - <?= heure($r['heure_fin']) ?></td>
                     <td><?= e($r['nom_service']) ?> <small class="text-muted">· <?= prix($r['prix']) ?></small></td>
-                    <td><?= e($r['client']) ?></td>
+                    <td><a href="client.php?id=<?= (int) $r['client_id'] ?>" class="text-decoration-none"><?= e($r['client']) ?></a></td>
                     <td><?= statut_badge($r['statut']) ?></td>
                 </tr>
             <?php endforeach; ?>

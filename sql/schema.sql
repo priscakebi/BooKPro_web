@@ -71,6 +71,22 @@ CREATE TABLE `horaires_ouverture` (
   CONSTRAINT `fk_horaires_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `notes_clients`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notes_clients` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `pro_id` int NOT NULL,
+  `client_id` int NOT NULL,
+  `note` text NOT NULL,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `pro_client` (`pro_id`,`client_id`),
+  KEY `fk_notes_client` (`client_id`),
+  CONSTRAINT `fk_notes_client` FOREIGN KEY (`client_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notes_pro` FOREIGN KEY (`pro_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `password_resets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -111,6 +127,7 @@ CREATE TABLE `reservations` (
   `user_id` int NOT NULL,
   `disponibilite_id` int NOT NULL,
   `statut` enum('en_attente','confirmee','refusee','annulee') NOT NULL DEFAULT 'en_attente',
+  `annule_par` enum('client','pro') DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_by_client` tinyint(1) DEFAULT '0',
   `creneau_actif` int GENERATED ALWAYS AS (if((`statut` in (_utf8mb4'annulee',_utf8mb4'refusee')),NULL,`disponibilite_id`)) STORED,
