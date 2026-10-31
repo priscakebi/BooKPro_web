@@ -35,70 +35,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Même message que le compte existe ou non (ne révèle pas les emails inscrits)
     $envoye = true;
 }
+
+$pageTitle = "Mot de passe oublié";
+include("../includes/auth_header.php");
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mot de passe oublié - BookPro</title>
+<h1 class="mb-1">Mot de passe oublié</h1>
+<p class="text-muted mb-4">Indiquez votre email, nous vous envoyons un lien pour en choisir un nouveau.</p>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php if ($envoye): ?>
 
-<body class="bg-light">
-
-<div class="container">
-
-    <div class="row justify-content-center mt-5">
-
-        <div class="col-md-5">
-
-            <div class="card p-4 shadow">
-
-                <h2 class="text-center mb-4">
-                    Mot de passe oublié
-                </h2>
-
-                <?php if ($envoye): ?>
-
-                    <div class="alert alert-success">
-                        Si un compte existe avec cette adresse, un lien de réinitialisation vient d'être envoyé.
-                    </div>
-
-                <?php else: ?>
-
-                <form method="POST">
-
-                    <?= csrf_field() ?>
-
-                    <input
-                        type="email"
-                        name="email"
-                        class="form-control mb-3"
-                        placeholder="Votre email"
-                        required>
-
-                    <button class="btn btn-primary w-100">
-                        Envoyer le lien
-                    </button>
-
-                </form>
-
-                <?php endif; ?>
-
-                <p class="text-center mt-3 mb-0">
-                    <a href="login.php">← Retour à la connexion</a>
-                </p>
-
-            </div>
-
-        </div>
-
+    <div class="alert alert-success d-flex gap-2">
+        <i class="bi bi-envelope-check-fill"></i>
+        Si un compte existe avec cette adresse, un lien de réinitialisation vient d'être envoyé.
     </div>
 
-</div>
+<?php else: ?>
 
-</body>
-</html>
+    <form method="POST">
+
+        <?= csrf_field() ?>
+
+        <div class="input-icon mb-4">
+            <i class="bi bi-envelope"></i>
+            <input type="email" name="email" class="form-control" placeholder="vous@exemple.fr" required autofocus>
+        </div>
+
+        <button class="btn btn-primary btn-lg w-100">Envoyer le lien</button>
+
+    </form>
+
+<?php endif; ?>
+
+<p class="text-center mt-4 mb-0"><a href="login.php" class="fw-semibold">Retour à la connexion</a></p>
+
+<?php include("../includes/auth_footer.php"); ?>

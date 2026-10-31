@@ -99,7 +99,7 @@ include("../includes/dash_header.php");
 
 ?>
 
-<div class="card p-4">
+<div class="bp-card">
 
     <?php if (empty($reservations)): ?>
 
@@ -107,7 +107,7 @@ include("../includes/dash_header.php");
 
     <?php else: ?>
 
-    <table class="table align-middle mb-0">
+    <table class="table table-modern align-middle mb-0">
 
         <thead>
             <tr><th>Date</th><th>Créneau</th><th>Service</th><th>Client</th><th>Statut</th><th></th></tr>

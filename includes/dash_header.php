@@ -2,30 +2,50 @@
 // ======================================================
 // MISE EN PAGE DES ESPACES CONNECTÉS (client, pro, admin)
 // Variables attendues : $pageTitle, $active (clé du menu)
+// Optionnelles : $pageSubtitle, $topAction (HTML à droite du titre)
 // ======================================================
 
 require_once __DIR__ . "/auth.php";
 
+$role = $_SESSION['role'] ?? '';
+
+// Pastille "à traiter" sur le menu Réservations du pro
+$aTraiter = 0;
+
+if ($role === 'professionnel' && isset($pdo)) {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM reservations r
+        JOIN disponibilites d ON r.disponibilite_id = d.id
+        JOIN services s ON d.service_id = s.id
+        WHERE s.user_id = ? AND r.statut = 'en_attente' AND d.date_disponible >= CURDATE()
+    ");
+    $stmt->execute([$_SESSION['user_id']]);
+    $aTraiter = (int) $stmt->fetchColumn();
+}
+
 $menus = [
     'client' => [
-        'dashboard'    => ['/user/dashboard.php', 'bi-speedometer2', 'Tableau de bord'],
-        'services'     => ['/user/services.php', 'bi-search', 'Trouver un service'],
+        'dashboard'    => ['/user/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+        'services'     => ['/user/services.php', 'bi-search', 'Trouver un pro'],
         'reservations' => ['/user/reservations.php', 'bi-calendar-event', 'Mes réservations'],
     ],
     'professionnel' => [
-        'dashboard'    => ['/pro/pro-dashboard.php', 'bi-speedometer2', 'Tableau de bord'],
-        'services'     => ['/pro/services.php', 'bi-briefcase', 'Mes services'],
-        'horaires'     => ['/pro/horaires.php', 'bi-clock', 'Disponibilités'],
-        'reservations' => ['/pro/rdv.php', 'bi-calendar-event', 'Réservations'],
+        'dashboard'    => ['/pro/pro-dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
+        'profil'       => ['/pro/profil.php', 'bi-person-badge', 'Mon profil'],
+        'services'     => ['/pro/services.php', 'bi-tags', 'Services & tarifs'],
+        'ouverture'    => ['/pro/ouverture.php', 'bi-shop', "Horaires d'ouverture"],
+        'horaires'     => ['/pro/horaires.php', 'bi-calendar-plus', 'Disponibilités'],
+        'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
     ],
     'admin' => [
-        'dashboard'    => ['/admin/dashboard.php', 'bi-speedometer2', 'Tableau de bord'],
+        'dashboard'    => ['/admin/dashboard.php', 'bi-grid-1x2', 'Tableau de bord'],
         'users'        => ['/admin/users.php', 'bi-people', 'Utilisateurs'],
     ],
 ];
 
-$menu = $menus[$_SESSION['role'] ?? ''] ?? [];
+$menu = $menus[$role] ?? [];
 $active = $active ?? '';
+$libellesRole = ['client' => 'Client', 'professionnel' => 'Professionnel', 'admin' => 'Administrateur'];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -37,60 +57,77 @@ $active = $active ?? '';
 
     <title><?= e($pageTitle ?? 'Mon espace') ?> - BookPro</title>
 
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/app.css">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/dashboard.css">
+    <!-- Active les animations uniquement si le JavaScript fonctionne -->
+    <script>document.documentElement.classList.add("js");</script>
 
 </head>
 
-<body class="dashboard-page">
+<body>
 
-<div class="d-flex">
+<div class="app-shell">
 
     <!-- ======================================================
     SIDEBAR
     ====================================================== -->
-    <div class="sidebar p-3">
+    <aside class="app-sidebar">
 
-        <a href="<?= BASE_URL ?>/index.php" class="text-white text-decoration-none">
-            <h3 class="mb-4">BookPro</h3>
+        <a href="<?= BASE_URL ?>/index.php" class="navbar-brand">
+            <span class="brand-logo"><i class="bi bi-calendar2-check"></i></span> BookPro
         </a>
 
-        <!-- USER INFO -->
-        <div class="user-box mb-4">
-
-            <i class="bi bi-person-circle"></i>
-
-            <div>
-                <small>Bienvenue</small><br>
-                <strong><?= e($_SESSION['user']['nom'] ?? '') ?></strong>
+        <div class="app-user">
+            <?= avatar($_SESSION['user'] ?? [], 42) ?>
+            <div class="text-truncate">
+                <strong class="d-block text-truncate"><?= e($_SESSION['user']['nom'] ?? '') ?></strong>
+                <small><?= e($libellesRole[$role] ?? '') ?></small>
             </div>
-
         </div>
 
-        <!-- MENU -->
-        <?php foreach ($menu as $key => [$href, $icon, $label]): ?>
-            <a href="<?= BASE_URL . $href ?>" class="menu <?= $key === $active ? 'active' : '' ?>">
-                <i class="bi <?= $icon ?>"></i> <?= e($label) ?>
-            </a>
-        <?php endforeach; ?>
+        <nav class="app-menu">
 
-        <a href="<?= BASE_URL ?>/auth/logout.php" class="menu text-danger">
+            <?php foreach ($menu as $key => $item): ?>
+                <?php [$href, $icon, $label] = $item; $count = $item[3] ?? 0; ?>
+                <a href="<?= BASE_URL . $href ?>" class="<?= $key === $active ? 'active' : '' ?>">
+                    <i class="bi <?= $icon ?>"></i> <?= e($label) ?>
+                    <?php if ($count > 0): ?><span class="menu-count"><?= $count ?></span><?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+
+            <?php if ($role === 'professionnel'): ?>
+                <a href="<?= BASE_URL ?>/user/pro.php?id=<?= (int) $_SESSION['user_id'] ?>" target="_blank">
+                    <i class="bi bi-box-arrow-up-right"></i> Voir ma page publique
+                </a>
+            <?php endif; ?>
+
+        </nav>
+
+        <a href="<?= BASE_URL ?>/auth/logout.php" class="app-menu logout d-flex align-items-center gap-2 px-3 py-2 text-decoration-none fw-semibold">
             <i class="bi bi-box-arrow-right"></i> Déconnexion
         </a>
 
-    </div>
+    </aside>
 
     <!-- ======================================================
-    CONTENT
+    CONTENU
     ====================================================== -->
-    <div class="content p-4 w-100">
+    <main class="app-content">
 
-        <h2 class="mb-4"><?= e($pageTitle ?? '') ?></h2>
+        <div class="app-topbar">
+
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-soft app-burger" type="button" aria-label="Menu"><i class="bi bi-list"></i></button>
+                <div>
+                    <h1><?= e($pageTitle ?? '') ?></h1>
+                    <?php if (!empty($pageSubtitle)): ?><p class="text-muted mb-0"><?= e($pageSubtitle) ?></p><?php endif; ?>
+                </div>
+            </div>
+
+            <?= $topAction ?? '' ?>
+
+        </div>
 
         <?php include __DIR__ . "/alertes.php"; ?>

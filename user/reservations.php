@@ -107,16 +107,16 @@ include("../includes/dash_header.php");
 
 <?php if (empty($reservations)): ?>
 
-    <div class="card p-4">
+    <div class="bp-card">
         <p class="mb-2">Vous n'avez pas encore de réservation.</p>
-        <a href="services.php" class="btn btn-primary align-self-start">Trouver un service</a>
+        <a href="services.php" class="btn btn-primary align-self-start">Trouver un pro</a>
     </div>
 
 <?php else: ?>
 
-<div class="card p-4">
+<div class="bp-card">
 
-    <table class="table align-middle mb-0">
+    <table class="table table-modern align-middle mb-0">
 
         <thead>
             <tr><th>Date</th><th>Créneau</th><th>Service</th><th>Professionnel</th><th>Statut</th><th></th></tr>

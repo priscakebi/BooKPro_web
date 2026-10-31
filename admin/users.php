@@ -86,9 +86,9 @@ include("../includes/dash_header.php");
     <?php endforeach; ?>
 </div>
 
-<div class="card p-4">
+<div class="bp-card">
 
-    <table class="table align-middle mb-0">
+    <table class="table table-modern align-middle mb-0">
 
         <thead>
             <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Infos pro</th><th>Inscrit le</th><th></th></tr>

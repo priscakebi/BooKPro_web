@@ -1,0 +1,6 @@
+# Les fichiers envoyés ne doivent jamais être exécutés
+<FilesMatch "\.(php|phtml|phar|php\d|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>
+php_flag engine off
+Options -Indexes

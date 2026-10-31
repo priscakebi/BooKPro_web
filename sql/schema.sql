@@ -41,6 +41,20 @@ CREATE TABLE `disponibilites` (
   CONSTRAINT `fk_dispo_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `horaires_ouverture`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `horaires_ouverture` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `jour` tinyint NOT NULL COMMENT '1 = lundi ... 7 = dimanche',
+  `heure_ouverture` time NOT NULL,
+  `heure_fermeture` time NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_jour` (`user_id`,`jour`),
+  CONSTRAINT `fk_horaires_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `password_resets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -54,22 +68,6 @@ CREATE TABLE `password_resets` (
   UNIQUE KEY `token_hash` (`token_hash`),
   KEY `fk_reset_user` (`user_id`),
   CONSTRAINT `fk_reset_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `rendez_vous`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `rendez_vous` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `service_id` int NOT NULL,
-  `date` date NOT NULL,
-  `heure` time NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `date` (`date`,`heure`),
-  KEY `user_id` (`user_id`),
-  KEY `service_id` (`service_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `reservations`;
@@ -119,6 +117,10 @@ CREATE TABLE `users` (
   `siret` varchar(14) DEFAULT NULL,
   `metier` varchar(100) DEFAULT NULL,
   `ville` varchar(100) DEFAULT NULL,
+  `description` text,
+  `adresse` varchar(255) DEFAULT NULL,
+  `code_postal` varchar(10) DEFAULT NULL,
+  `photo` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','client','professionnel') NOT NULL DEFAULT 'client',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1,491 +1,177 @@
 <?php
 
 // ======================================================
-// DÉMARRAGE DE LA SESSION
+// INSCRIPTION D'UN PROFESSIONNEL
 // ======================================================
-require_once("../includes/auth.php");
 
-// ======================================================
-// CONNEXION À LA BASE DE DONNÉES
-// ======================================================
+require_once("../includes/auth.php");
 require("../config/database.php");
 
-// Métiers proposés (liste unique pour le formulaire et la validation)
-const METIERS = ['Plombier', 'Électricien', 'Mécanicien', 'Menuisier', 'Peintre'];
+$erreur = null;
+$v = $_POST;
 
-// ======================================================
-// MESSAGE D'ERREUR OU DE SUCCÈS
-// ======================================================
-$message = "";
-
-// ======================================================
-// TRAITEMENT DU FORMULAIRE
-// ======================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    // ==================================================
-    // RÉCUPÉRATION DES DONNÉES
-    // ==================================================
 
     csrf_check();
 
     // Valeurs brutes : on échappe uniquement à l'affichage
-    $nom = trim($_POST["nom"] ?? "");
-
-    $email = trim($_POST["email"] ?? "");
-
-    $telephone = trim($_POST["telephone"] ?? "");
-
-    $entreprise = trim($_POST["entreprise"] ?? "");
-
-    $siret = trim($_POST["siret"] ?? "");
-
-    $metier = trim($_POST["metier"] ?? "");
-
-    $ville = trim($_POST["ville"] ?? "");
+    $champs = ['nom', 'email', 'telephone', 'entreprise', 'siret', 'metier', 'ville', 'code_postal'];
+    $d = [];
+    foreach ($champs as $c) {
+        $d[$c] = trim($_POST[$c] ?? "");
+    }
+    $d['siret'] = str_replace(' ', '', $d['siret']);
 
     $password = $_POST["password"] ?? "";
-    $confirmPassword = $_POST["confirm_password"] ?? "";
 
-    // ==================================================
-    // VÉRIFICATION DES CHAMPS
-    // ==================================================
+    $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $check->execute([$d['email']]);
 
-    if (
-
-        !empty($nom) &&
-        !empty($email) &&
-        !empty($telephone) &&
-        !empty($entreprise) &&
-        !empty($siret) &&
-        !empty($metier) &&
-        !empty($ville) &&
-        !empty($password) &&
-        !empty($confirmPassword)
-
-    ) {
-
-        // ==============================================
-        // VÉRIFICATION DU FORMAT DU SIRET
-        // ==============================================
-
-        // Email déjà utilisé ?
-        $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $check->execute([$email]);
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-
-            $message = "<div class='alert danger'>Adresse email invalide.</div>";
-
-        } elseif ($check->fetch()) {
-
-            $message = "<div class='alert danger'>Cet email est déjà utilisé.</div>";
-
-        } elseif (strlen($password) < 8) {
-
-            $message = "<div class='alert danger'>Le mot de passe doit contenir au moins 8 caractères.</div>";
-
-        } elseif (!in_array($metier, METIERS, true)) {
-
-            $message = "<div class='alert danger'>Métier invalide.</div>";
-
-        } elseif (!preg_match('/^[0-9]{14}$/', $siret)) {
-
-            $message = "
-
-                <div class='alert danger'>
-
-                    Le numéro SIRET doit contenir exactement 14 chiffres.
-
-                </div>
-
-            ";
-        } else {
-
-            // ======================================
-            // VÉRIFICATION MOTS DE PASSE
-            // ======================================
-
-            if ($password !== $confirmPassword) {
-
-                $message = "
-
-                        <div class='alert danger'>
-
-                            Les mots de passe ne correspondent pas.
-
-                        </div>
-
-                    ";
-            } else {
-
-                // ======================================
-                // HASH DU MOT DE PASSE
-                // ======================================
-
-                $passwordHash = password_hash(
-                    $password,
-                    PASSWORD_DEFAULT
-                );
-
-                // ======================================
-                // INSERTION DU PROFESSIONNEL
-                // ======================================
-
-                $insert = $pdo->prepare("
-
-                        INSERT INTO users (
-                            nom,
-                            email,
-                            telephone,
-                            entreprise,
-                            siret,
-                            metier,
-                            ville,
-                            password,
-                            role
-                        )
-                        VALUES (
-                            ?, ?, ?, ?, ?, ?, ?, ?, 'professionnel'
-                        )
-
-                    ");
-
-                $insert->execute([
-                    $nom,
-                    $email,
-                    $telephone,
-                    $entreprise,
-                    $siret,
-                    $metier,
-                    $ville,
-                    $passwordHash
-                ]);
-
-                // ======================================
-                // MESSAGE DE SUCCÈS
-                // ======================================
-
-                flash("Votre compte professionnel a été créé avec succès. Connectez-vous pour publier vos services.");
-
-                redirect("/auth/login.php");
-            }
-        }
+    if (in_array("", [$d['nom'], $d['email'], $d['telephone'], $d['siret'], $d['metier'], $d['ville']], true) || $password === "") {
+        $erreur = "Merci de remplir tous les champs obligatoires.";
+    } elseif (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)) {
+        $erreur = "Adresse email invalide.";
+    } elseif ($check->fetch()) {
+        $erreur = "Cet email est déjà utilisé.";
+    } elseif (!array_key_exists($d['metier'], METIERS)) {
+        $erreur = "Métier invalide.";
+    } elseif (!preg_match('/^[0-9]{14}$/', $d['siret'])) {
+        $erreur = "Le numéro SIRET doit contenir exactement 14 chiffres.";
+    } elseif ($d['code_postal'] !== "" && !preg_match('/^[0-9]{5}$/', $d['code_postal'])) {
+        $erreur = "Le code postal doit contenir 5 chiffres.";
+    } elseif (strlen($password) < 8) {
+        $erreur = "Le mot de passe doit contenir au moins 8 caractères.";
+    } elseif ($password !== ($_POST["confirm_password"] ?? "")) {
+        $erreur = "Les mots de passe ne correspondent pas.";
     } else {
 
-        // ==============================================
-        // CHAMPS MANQUANTS
-        // ==============================================
+        $pdo->prepare("
+            INSERT INTO users (nom, email, telephone, entreprise, siret, metier, ville, code_postal, password, role)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'professionnel')
+        ")->execute([
+            $d['nom'], $d['email'], $d['telephone'], $d['entreprise'] ?: null, $d['siret'],
+            $d['metier'], $d['ville'], $d['code_postal'] ?: null, password_hash($password, PASSWORD_DEFAULT)
+        ]);
 
-        $message = "
+        // Connexion directe, puis parcours de démarrage
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$pdo->lastInsertId()]);
+        login_user($stmt->fetch());
 
-            <div class='alert danger'>
-
-                Tous les champs sont obligatoires.
-
-            </div>
-
-        ";
+        flash("Bienvenue ! Complétez votre profil en quelques étapes pour apparaître auprès des clients.");
+        redirect("/pro/pro-dashboard.php");
     }
 }
 
+$pageTitle = "Devenir professionnel";
+$wide = true;
+$sideTitle = "Développez votre activité avec BookPro.";
+$sidePerks = [
+    ['bi-shop', 'Votre vitrine en ligne', 'Présentation, photo, services, tarifs et horaires.'],
+    ['bi-calendar-week', 'Agenda rempli', 'Les clients réservent vos créneaux libres 24h/24.'],
+    ['bi-shield-check', 'Vous gardez la main', 'Confirmez ou refusez chaque demande.'],
+];
+include("../includes/auth_header.php");
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-    <!-- ==================================================
-    META
-    ================================================== -->
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <title>Devenir professionnel - BookPro</title>
-
-    <!-- ==================================================
-    BOOTSTRAP
-    ================================================== -->
-
-
-
-
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-
-
-
-    <!-- ==================================================
-    CSS
-    ================================================== -->
-
-    <link rel="stylesheet" href="../assets/pro-register.css">
-
-
-</head>
-
-<body>
-
-    <!-- ======================================================
-PAGE INSCRIPTION PROFESSIONNEL
-====================================================== -->
-
-    <section class="auth-page">
-
-        <div class="register-card">
-
-            <!-- LOGO -->
-
-            <div class="logo">
-                BookPro
-            </div>
-
-            <!-- TITRE -->
-
-            <h1 class="register-title">
-                Devenir professionnel
-            </h1>
-
-            <!-- SOUS-TITRE -->
-
-            <p class="register-subtitle">
-                Rejoignez BookPro et développez votre activité.
-            </p>
-
-            <!-- MESSAGE -->
-
-            <?= $message ?>
-
-            <!-- FORMULAIRE -->
-
-            <form method="POST">
-
-                <?= csrf_field() ?>
-
-                <!-- NOM -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-person-fill"></i>
-                    </div>
-
-                    <input
-                        type="text"
-                        name="nom"
-                        value="<?= e($_POST['nom'] ?? '') ?>"
-                        placeholder="Nom complet"
-                        required>
-
-                </div>
-
-                <!-- EMAIL -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-envelope-fill"></i>
-                    </div>
-
-                    <input
-                        type="email"
-                        name="email"
-                        value="<?= e($_POST['email'] ?? '') ?>"
-                        placeholder="Adresse email"
-                        required>
-
-                </div>
-
-                <!-- TELEPHONE -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-telephone-fill"></i>
-                    </div>
-
-                    <input
-                        type="text"
-                        name="telephone"
-                        value="<?= e($_POST['telephone'] ?? '') ?>"
-                        placeholder="Téléphone"
-                        required>
-
-                </div>
-
-                <!-- ENTREPRISE -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-building-fill"></i>
-                    </div>
-
-                    <input
-                        type="text"
-                        name="entreprise"
-                        value="<?= e($_POST['entreprise'] ?? '') ?>"
-                        placeholder="Nom de l'entreprise"
-                        required>
-
-                </div>
-
-                <!-- SIRET -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-file-earmark-text-fill"></i>
-                    </div>
-
-                    <input
-                        type="text"
-                        name="siret"
-                        value="<?= e($_POST['siret'] ?? '') ?>"
-                        maxlength="14"
-                        placeholder="Numéro SIRET"
-                        required>
-
-                </div>
-
-                <!-- METIER -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-briefcase-fill"></i>
-                    </div>
-
-                    <select name="metier" required>
-
-                        <option value="">
-                            Choisissez un métier
-                        </option>
-
-                        <?php foreach (METIERS as $m): ?>
-                            <option value="<?= e($m) ?>" <?= ($_POST['metier'] ?? '') === $m ? 'selected' : '' ?>>
-                                <?= e($m) ?>
-                            </option>
-                        <?php endforeach; ?>
-
-                    </select>
-
-                </div>
-
-                <!-- VILLE -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-geo-alt-fill"></i>
-                    </div>
-
-                    <input
-                        type="text"
-                        name="ville"
-                        value="<?= e($_POST['ville'] ?? '') ?>"
-                        placeholder="Ville"
-                        required>
-
-                </div>
-
-                <!-- PASSWORD -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-lock-fill"></i>
-                    </div>
-
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="Mot de passe"
-                        required>
-
-                    <button
-                        type="button"
-                        class="eye-btn"
-                        onclick="togglePassword('password', this)">
-
-                        <i class="bi bi-eye-fill"></i>
-
-                    </button>
-
-                </div>
-
-                <!-- CONFIRM PASSWORD -->
-                <div class="input-group-custom">
-
-                    <div class="icon-box">
-                        <i class="bi bi-shield-lock-fill"></i>
-                    </div>
-
-                    <input
-                        type="password"
-                        id="confirmPassword"
-                        name="confirm_password"
-                        placeholder="Confirmer le mot de passe"
-                        required>
-
-                    <button
-                        type="button"
-                        class="eye-btn"
-                        onclick="togglePassword('confirmPassword', this)">
-
-                        <i class="bi bi-eye-fill"></i>
-
-                    </button>
-
-                </div>
-
-                <!-- BOUTON -->
-                <button
-                    type="submit"
-                    class="register-btn">
-
-                    Créer mon compte professionnel
-
-                </button>
-
-            </form>
-
-            <!-- ======================================================
-LIENS BAS DE PAGE
-====================================================== -->
-
-            <div class="bottom-links">
-
-                <!-- CONNEXION -->
-
-                <p class="login-link">
-
-                    Déjà inscrit ?
-
-                    <a href="login.php">
-                        Se connecter
-                    </a>
-
-                </p>
-
-                <!-- RETOUR ACCUEIL -->
-
-                <a href="../index.php" class="back-home">
-
-                    <i class="bi bi-arrow-left"></i>
-
-                    Retour à l'accueil
-
-                </a>
-
-            </div>
-
-
-
+<span class="eyebrow">Espace professionnel</span>
+<h1 class="mb-1 mt-1">Créez votre profil pro</h1>
+<p class="text-muted mb-4">Gratuit. Vous compléterez votre présentation, vos services et vos horaires juste après.</p>
+
+<?php if ($erreur): ?>
+    <div class="alert alert-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i> <?= e($erreur) ?></div>
+<?php endif; ?>
+
+<form method="POST">
+
+    <?= csrf_field() ?>
+
+    <!-- ACTIVITÉ -->
+    <h6 class="text-muted text-uppercase small fw-bold mb-3"><i class="bi bi-briefcase me-1"></i> Votre activité</h6>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-sm-6">
+            <label class="form-label">Métier *</label>
+            <select name="metier" class="form-select" required>
+                <option value="">Choisissez…</option>
+                <?php foreach (METIERS as $m => $icon): ?>
+                    <option value="<?= e($m) ?>" <?= ($v['metier'] ?? '') === $m ? 'selected' : '' ?>><?= e($m) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
 
-    </section>
+        <div class="col-sm-6">
+            <label class="form-label">Nom de l'entreprise</label>
+            <input type="text" name="entreprise" class="form-control" placeholder="Ex : Dupont Plomberie" value="<?= e($v['entreprise'] ?? '') ?>">
+        </div>
 
-    <script src="../assets/app.js"></script>
+        <div class="col-sm-6">
+            <label class="form-label">SIRET *</label>
+            <input type="text" name="siret" class="form-control" inputmode="numeric" maxlength="17" placeholder="14 chiffres" value="<?= e($v['siret'] ?? '') ?>" required>
+        </div>
 
-</body>
+        <div class="col-sm-3">
+            <label class="form-label">Code postal</label>
+            <input type="text" name="code_postal" class="form-control" inputmode="numeric" maxlength="5" value="<?= e($v['code_postal'] ?? '') ?>">
+        </div>
 
-</html>
+        <div class="col-sm-3">
+            <label class="form-label">Ville *</label>
+            <input type="text" name="ville" class="form-control" value="<?= e($v['ville'] ?? '') ?>" required>
+        </div>
+
+    </div>
+
+    <!-- CONTACT -->
+    <h6 class="text-muted text-uppercase small fw-bold mb-3"><i class="bi bi-person me-1"></i> Vos coordonnées</h6>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-sm-6">
+            <label class="form-label">Nom complet *</label>
+            <input type="text" name="nom" class="form-control" value="<?= e($v['nom'] ?? '') ?>" required>
+        </div>
+
+        <div class="col-sm-6">
+            <label class="form-label">Téléphone *</label>
+            <input type="tel" name="telephone" class="form-control" placeholder="06 12 34 56 78" value="<?= e($v['telephone'] ?? '') ?>" required>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Email *</label>
+            <input type="email" name="email" class="form-control" placeholder="contact@entreprise.fr" value="<?= e($v['email'] ?? '') ?>" required>
+        </div>
+
+    </div>
+
+    <!-- SÉCURITÉ -->
+    <h6 class="text-muted text-uppercase small fw-bold mb-3"><i class="bi bi-lock me-1"></i> Mot de passe</h6>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-sm-6">
+            <div class="input-icon">
+                <i class="bi bi-lock"></i>
+                <input type="password" name="password" id="password" class="form-control" placeholder="8 caractères min." minlength="8" required>
+                <button type="button" class="eye-btn" onclick="togglePassword('password', this)"><i class="bi bi-eye-fill"></i></button>
+            </div>
+        </div>
+
+        <div class="col-sm-6">
+            <div class="input-icon">
+                <i class="bi bi-shield-lock"></i>
+                <input type="password" name="confirm_password" id="confirmPassword" class="form-control" placeholder="Confirmation" required>
+                <button type="button" class="eye-btn" onclick="togglePassword('confirmPassword', this)"><i class="bi bi-eye-fill"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <button type="submit" class="btn btn-gradient btn-lg w-100">Créer mon profil professionnel <i class="bi bi-arrow-right ms-1"></i></button>
+
+</form>
+
+<p class="text-center mt-4 mb-0">Déjà inscrit ? <a href="login.php" class="fw-semibold">Se connecter</a></p>
+
+<?php include("../includes/auth_footer.php"); ?>

@@ -56,18 +56,20 @@ include("../includes/dash_header.php");
     ?>
 
     <?php foreach ($cartes as [$icon, $nb, $label]): ?>
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <i class="bi <?= $icon ?>"></i>
-                <h4><?= (int) $nb ?></h4>
-                <p><?= e($label) ?></p>
+        <div class="col-sm-6 col-xl-3">
+            <div class="bp-card stat-card">
+                <div class="stat-icon"><i class="bi <?= $icon ?>"></i></div>
+                <div>
+                    <div class="stat-value" data-count="<?= (int) $nb ?>"><?= (int) $nb ?></div>
+                    <div class="stat-label"><?= e($label) ?></div>
+                </div>
             </div>
         </div>
     <?php endforeach; ?>
 
 </div>
 
-<div class="card mt-4 p-4">
+<div class="bp-card mt-4">
 
     <h4>Dernières réservations</h4>
 
@@ -77,7 +79,7 @@ include("../includes/dash_header.php");
 
     <?php else: ?>
 
-    <table class="table align-middle mb-0">
+    <table class="table table-modern align-middle mb-0">
         <thead>
             <tr><th>Créneau</th><th>Service</th><th>Client</th><th>Professionnel</th><th>Statut</th></tr>
         </thead>

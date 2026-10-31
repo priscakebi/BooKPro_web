@@ -1,1 +1,3 @@
 sql/backup_*.sql
+uploads/pros/*
+!uploads/pros/.gitkeep

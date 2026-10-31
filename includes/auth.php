@@ -6,8 +6,26 @@
 date_default_timezone_set('Europe/Paris');
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Cookie de session inaccessible au JavaScript et non envoyé par d'autres sites
+    session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();
 }
+
+// ======================================================
+// RÉFÉRENTIELS
+// ======================================================
+
+// Métier => icône Bootstrap Icons
+const METIERS = [
+    'Plombier'    => 'bi-droplet-half',
+    'Électricien' => 'bi-lightning-charge',
+    'Mécanicien'  => 'bi-car-front',
+    'Menuisier'   => 'bi-hammer',
+    'Peintre'     => 'bi-palette',
+];
+
+// 1 = lundi ... 7 = dimanche (comme date('N'))
+const JOURS = [1 => 'Lundi', 2 => 'Mardi', 3 => 'Mercredi', 4 => 'Jeudi', 5 => 'Vendredi', 6 => 'Samedi', 7 => 'Dimanche'];
 
 // ======================================================
 // URL DE BASE DU SITE (ex : /BookPro_web/BooKPro_web)
@@ -86,6 +104,75 @@ function date_fr($date)
 function heure($time)
 {
     return substr($time, 0, 5);
+}
+
+// "lun. 15 déc." (sans dépendre de l'extension intl)
+function jour_court($date)
+{
+    $jours = ['', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+    $mois = ['', 'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    $t = strtotime($date);
+
+    return $jours[date('N', $t)] . ' ' . date('j', $t) . ' ' . $mois[date('n', $t)];
+}
+
+// Prix : 56.00 => "56 €", 56.50 => "56,50 €"
+function prix($montant)
+{
+    $montant = (float) $montant;
+
+    return (floor($montant) == $montant ? number_format($montant, 0, ',', ' ') : number_format($montant, 2, ',', ' ')) . ' €';
+}
+
+// ======================================================
+// AVATAR : photo du pro, sinon initiales sur fond dégradé
+// ======================================================
+function avatar($user, $size = 56)
+{
+    $style = "width:{$size}px;height:{$size}px;font-size:" . round($size * 0.38) . "px";
+
+    if (!empty($user['photo'])) {
+        return '<img src="' . BASE_URL . '/uploads/pros/' . e($user['photo']) . '" alt="" class="avatar" style="' . $style . '">';
+    }
+
+    $mots = preg_split('/\s+/', trim($user['nom'] ?? '?'));
+    $initiales = mb_strtoupper(mb_substr($mots[0], 0, 1) . (isset($mots[1]) ? mb_substr($mots[1], 0, 1) : ''));
+
+    // Couleur stable par personne
+    $teinte = crc32($user['nom'] ?? '') % 360;
+
+    return '<span class="avatar avatar-initiales" style="' . $style . ';--h:' . $teinte . '">' . e($initiales) . '</span>';
+}
+
+// Étoiles pleines / vides pour une note sur 5
+function etoiles($note)
+{
+    $n = (int) round((float) $note);
+
+    return '<span class="stars">' . str_repeat('<i class="bi bi-star-fill"></i>', $n) . str_repeat('<i class="bi bi-star"></i>', 5 - $n) . '</span>';
+}
+
+// ======================================================
+// OUVERTURE DE SESSION (connexion ou juste après inscription)
+// ======================================================
+function login_user($user)
+{
+    // Nouvel identifiant de session (anti-fixation)
+    session_regenerate_id(true);
+
+    // On ne garde pas le hash du mot de passe en session
+    unset($user["password"]);
+
+    $_SESSION["user"] = $user;
+    $_SESSION["user_id"] = $user["id"];
+    $_SESSION["email"] = $user["email"];
+    $_SESSION["role"] = $user["role"];
+}
+
+// Redirection "après connexion" : uniquement un chemin interne (/...)
+function safe_next($next)
+{
+    return (is_string($next) && preg_match('#^/[^/\\\\]#', $next)) ? $next : null;
 }
 
 // ======================================================

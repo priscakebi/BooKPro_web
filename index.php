@@ -1,310 +1,257 @@
 <?php
 require_once("includes/auth.php");
+require("config/database.php");
+require("includes/pros.php");
 
 // ======================================================
-// UTILISATEUR CONNECTÉ ?
+// DONNÉES DE LA PAGE
 // ======================================================
-$user = $_SESSION['user'] ?? null;
+
+// Chiffres clés
+$nbPros = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM services")->fetchColumn();
+$nbServices = $pdo->query("SELECT COUNT(*) FROM services")->fetchColumn();
+$nbCreneaux = $pdo->query("
+    SELECT COUNT(*) FROM disponibilites d
+    WHERE CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
+      AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.disponibilite_id = d.id AND r.creneau_actif IS NOT NULL)
+")->fetchColumn();
+
+// Nombre de pros par métier
+$parMetier = $pdo->query("
+    SELECT u.metier, COUNT(DISTINCT u.id) FROM users u
+    JOIN services s ON s.user_id = u.id
+    WHERE u.role = 'professionnel' GROUP BY u.metier
+")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Pros mis en avant
+$pros = rechercher_pros($pdo, [], 6);
+
+$pageTitle = "Réservez un professionnel près de chez vous";
+$navTransparent = true;
+include("includes/public_header.php");
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-    <!-- ======================================================
-    META
-    ====================================================== -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>BookPro - Réservez un professionnel</title>
-
-    <!-- ======================================================
-    BOOTSTRAP
-    ====================================================== -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- ======================================================
-    BOOTSTRAP ICONS
-    ====================================================== -->
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-    <!-- ======================================================
-    CSS
-    ====================================================== -->
-    <link rel="stylesheet" href="assets/style.css">
-
-</head>
-
-<body>
-
-    <!-- ======================================================
-NAVBAR
+<!-- ======================================================
+HERO
 ====================================================== -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+<section class="hero">
 
     <div class="container">
 
-        <!-- LOGO -->
-        <a class="navbar-brand fw-bold" href="index.php">
-            BookPro
-        </a>
+        <div class="row align-items-center g-5">
 
-        <!-- MENU -->
-        <div class="ms-auto d-flex align-items-center gap-3">
+            <div class="col-lg-7">
 
-            <!-- ACCUEIL -->
-            <a class="nav-link text-white" href="index.php">
-                Accueil
-            </a>
+                <span class="hero-badge mb-4 animate-in"><i class="bi bi-lightning-charge-fill"></i> Réservation en ligne, sans appel</span>
 
-            <!-- SERVICES -->
-            <a class="nav-link text-white" href="user/services.php">
-                Services
-            </a>
+                <h1 class="mb-4 animate-in delay-1">
+                    Le bon pro,<br>au bon moment,<br><span style="color:#7cf2dc">au juste prix.</span>
+                </h1>
 
-            <?php if ($user): ?>
+                <p class="lead mb-5 animate-in delay-2">
+                    Comparez les professionnels près de chez vous, consultez leurs tarifs et horaires, puis réservez un créneau libre en quelques secondes.
+                </p>
 
-                <!-- MON COMPTE -->
-                <a class="nav-link text-white"
-                   href="<?= ltrim(dashboard_path($user["role"] ?? ""), "/") ?>">
+                <!-- RECHERCHE -->
+                <form class="search-bar animate-in delay-3" method="GET" action="user/services.php">
 
-                    <i class="bi bi-person-circle"></i>
+                    <div class="field">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="q" class="form-control" placeholder="Service, pro…">
+                    </div>
 
-                </a>
+                    <div class="field">
+                        <i class="bi bi-briefcase"></i>
+                        <select name="metier" class="form-select">
+                            <option value="">Métier</option>
+                            <?php foreach (METIERS as $m => $icon): ?>
+                                <option value="<?= e($m) ?>"><?= e($m) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                <!-- DÉCONNEXION -->
-                <a class="nav-link text-danger"
-                   href="auth/logout.php">
+                    <div class="field">
+                        <i class="bi bi-geo-alt"></i>
+                        <input type="text" name="ville" class="form-control" placeholder="Ville ou CP">
+                    </div>
 
-                    <i class="bi bi-box-arrow-right"></i>
+                    <button class="btn btn-primary btn-lg px-4">Rechercher</button>
 
-                </a>
+                </form>
 
-            <?php else: ?>
+                <div class="hero-stats mt-5 animate-in delay-3">
+                    <div><strong data-count="<?= (int) $nbPros ?>">0</strong><span>professionnels</span></div>
+                    <div><strong data-count="<?= (int) $nbServices ?>">0</strong><span>services</span></div>
+                    <div><strong data-count="<?= (int) $nbCreneaux ?>">0</strong><span>créneaux libres</span></div>
+                </div>
 
-                <!-- PROFESSIONNELS -->
-                <a class="nav-link text-white" href="auth/pro-register.php">
-                    Devenir Professionnel
-                </a>
+            </div>
 
-                <!-- CONNEXION -->
-                <a class="login-btn"
-                   href="auth/login.php">
+            <!-- VISUEL -->
+            <div class="col-lg-5 d-none d-lg-block">
 
-                    Se connecter
+                <div class="hero-visual">
 
-                </a>
+                    <div class="main-card">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <span class="cat-icon m-0" style="width:52px;height:52px;background:rgba(255,255,255,.18);color:#fff"><i class="bi bi-droplet-half"></i></span>
+                            <div>
+                                <strong class="d-block">Votre plombier</strong>
+                                <small class="opacity-75">Tarifs, horaires et avis visibles</small>
+                            </div>
+                        </div>
+                        <p class="small opacity-75 mb-2">Créneaux disponibles demain</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach (['08:30', '10:00', '11:30', '14:00', '16:30'] as $i => $h): ?>
+                                <span class="badge rounded-pill <?= $i === 2 ? 'bg-white text-dark' : 'border border-light' ?> px-3 py-2"><?= $h ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
 
-            <?php endif; ?>
+                    <div class="hero-float" style="top:0; right:0;">
+                        <i class="bi bi-check-circle-fill text-success"></i> <strong>Réservation confirmée</strong><br>
+                        <small class="text-muted">Demain à 11:30</small>
+                    </div>
+
+                    <div class="hero-float" style="bottom:10px; left:0; animation-delay:-3s;">
+                        <small class="text-muted d-block">À partir de</small>
+                        <strong class="fs-5">45 €</strong>
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
 
     </div>
 
-</nav>
+</section>
 
-     <!--====================================================== 
-    HERO ====================================================== --> 
-    <section class="hero">
-        <div class="text-center">
-            <h1>BookPro</h1>
-            <p> Trouvez et réservez vos services en quelques clics </p> 
-            <!-- SEARCH -->
-            <form class="search-box" method="GET" action="user/services.php">
-                <input type="text" name="search" class="form-control form-control-lg mb-3" placeholder="Plombier, mécanicien, menuisier...">
-                <button class="btn btn-light w-100"> Rechercher </button> 
-            </form>
-        </div>
-    </section>
-
-    <!-- ======================================================
-CATÉGORIES POPULAIRES
+<!-- ======================================================
+MÉTIERS
 ====================================================== -->
-    <section class="py-5 bg-light">
+<section class="section">
 
-        <div class="container">
+    <div class="container">
 
-            <h2 class="text-center mb-5">
-                Services populaires
-            </h2>
+        <div class="text-center mb-5 reveal">
+            <span class="eyebrow">Catégories</span>
+            <h2 class="section-title mt-2">De quoi avez-vous besoin ?</h2>
+        </div>
 
-            <div class="row g-4">
+        <div class="row g-4 justify-content-center">
 
-                <?php
-                // Catégorie => [icône, mot-clé de recherche (métier du pro)]
-                $categories = [
-                    'Plomberie'   => ['bi-droplet', 'Plomb'],
-                    'Mécanique'   => ['bi-car-front', 'Mécani'],
-                    'Électricité' => ['bi-lightning', 'Électri'],
-                    'Menuiserie'  => ['bi-hammer', 'Menuis'],
-                ];
-                ?>
-
-                <?php foreach ($categories as $nom => [$icon, $recherche]): ?>
-                <div class="col-md-3">
-                    <a href="user/services.php?search=<?= urlencode($recherche) ?>" class="text-decoration-none text-dark">
-                        <div class="card text-center p-4 h-100">
-                            <i class="bi <?= $icon ?> fs-1 text-primary"></i>
-                            <h5 class="mt-3"><?= $nom ?></h5>
-                        </div>
+            <?php $i = 0; foreach (METIERS as $metier => $icon): ?>
+                <div class="col-6 col-md-4 col-lg reveal reveal-delay-<?= $i++ % 4 ?>">
+                    <a href="user/services.php?metier=<?= urlencode($metier) ?>" class="bp-card card-hover cat-card h-100">
+                        <div class="cat-icon"><i class="bi <?= $icon ?>"></i></div>
+                        <h5 class="mb-1"><?= e($metier) ?></h5>
+                        <small class="text-muted"><?= (int) ($parMetier[$metier] ?? 0) ?> pro<?= ($parMetier[$metier] ?? 0) > 1 ? 's' : '' ?></small>
                     </a>
                 </div>
-                <?php endforeach; ?>
-
-            </div>
+            <?php endforeach; ?>
 
         </div>
 
-    </section>
+    </div>
 
-    <!-- ======================================================
+</section>
+
+<!-- ======================================================
+PROS MIS EN AVANT
+====================================================== -->
+<?php if (!empty($pros)): ?>
+<section class="section pt-0">
+
+    <div class="container">
+
+        <div class="d-flex justify-content-between align-items-end mb-5 reveal">
+            <div>
+                <span class="eyebrow">Ils sont disponibles</span>
+                <h2 class="section-title mt-2 mb-0">Professionnels à découvrir</h2>
+            </div>
+            <a href="user/services.php" class="btn btn-outline-primary d-none d-md-inline-flex">Voir tous les pros <i class="bi bi-arrow-right ms-2"></i></a>
+        </div>
+
+        <div class="row g-4">
+            <?php foreach ($pros as $i => $pro): ?>
+                <div class="col-md-6 col-lg-4 reveal reveal-delay-<?= $i % 3 ?>">
+                    <?php include("includes/pro_card.php"); ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+    </div>
+
+</section>
+<?php endif; ?>
+
+<!-- ======================================================
 COMMENT ÇA MARCHE
 ====================================================== -->
-    <section class="py-5">
+<section class="section bg-white">
 
-        <div class="container">
+    <div class="container">
 
-            <h2 class="text-center mb-5">
-                Comment ça fonctionne ?
-            </h2>
+        <div class="text-center mb-5 reveal">
+            <span class="eyebrow">Simple et rapide</span>
+            <h2 class="section-title mt-2">Comment ça marche ?</h2>
+        </div>
 
-            <div class="row text-center">
+        <div class="row g-4">
 
-                <div class="col-md-4">
+            <?php
+            $etapes = [
+                ['Recherchez', 'Filtrez par métier et par ville, comparez les tarifs, les avis et les horaires d\'ouverture.'],
+                ['Réservez', 'Choisissez un créneau libre dans l\'agenda du professionnel. Aucun appel nécessaire.'],
+                ['Profitez', 'Le pro confirme votre rendez-vous. Après l\'intervention, laissez votre avis.'],
+            ];
+            ?>
 
-                    <i class="bi bi-search fs-1 text-primary"></i>
+            <?php foreach ($etapes as $i => [$titre, $texte]): ?>
+                <div class="col-md-4 reveal reveal-delay-<?= $i ?>">
+                    <div class="bp-card h-100">
+                        <div class="step-num"><?= $i + 1 ?></div>
+                        <h4><?= $titre ?></h4>
+                        <p class="text-muted mb-0"><?= $texte ?></p>
+                    </div>
+                </div>
+            <?php endforeach; ?>
 
-                    <h4 class="mt-3">
-                        Recherchez
-                    </h4>
+        </div>
 
-                    <p>
-                        Trouvez le service dont vous avez besoin.
-                    </p>
+    </div>
 
+</section>
+
+<!-- ======================================================
+APPEL AUX PROS
+====================================================== -->
+<section class="section">
+
+    <div class="container">
+
+        <div class="cta-pro reveal">
+
+            <div class="row align-items-center g-4 position-relative" style="z-index:1">
+
+                <div class="col-lg-8">
+                    <span class="eyebrow text-white opacity-75">Vous êtes professionnel ?</span>
+                    <h2 class="section-title mt-2">Remplissez votre agenda, sans effort.</h2>
+                    <p class="mb-0 opacity-75 fs-5">Créez votre page, affichez vos tarifs et horaires, publiez vos disponibilités : les clients réservent directement en ligne.</p>
                 </div>
 
-                <div class="col-md-4">
-
-                    <i class="bi bi-calendar-check fs-1 text-primary"></i>
-
-                    <h4 class="mt-3">
-                        Réservez
-                    </h4>
-
-                    <p>
-                        Choisissez une date disponible.
-                    </p>
-
-                </div>
-
-                <div class="col-md-4">
-
-                    <i class="bi bi-star fs-1 text-primary"></i>
-
-                    <h4 class="mt-3">
-                        Profitez
-                    </h4>
-
-                    <p>
-                        Faites intervenir un professionnel qualifié.
-                    </p>
-
+                <div class="col-lg-4 text-lg-end">
+                    <a href="auth/pro-register.php" class="btn btn-light btn-lg fw-bold">Créer mon profil pro <i class="bi bi-arrow-right ms-1"></i></a>
                 </div>
 
             </div>
 
         </div>
 
-    </section>
+    </div>
 
-    <!-- ======================================================
-POURQUOI BOOKPRO
-====================================================== -->
-    <section class="py-5 bg-light">
+</section>
 
-        <div class="container">
-
-            <h2 class="text-center mb-5">
-                Pourquoi choisir BookPro ?
-            </h2>
-
-            <div class="row">
-
-                <div class="col-md-4">
-
-                    <div class="card p-4 h-100">
-
-                        <h4>
-                            Professionnels vérifiés
-                        </h4>
-
-                        <p>
-                            Tous nos partenaires sont contrôlés.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div class="col-md-4">
-
-                    <div class="card p-4 h-100">
-
-                        <h4>
-                            Réservation rapide
-                        </h4>
-
-                        <p>
-                            Quelques clics suffisent.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div class="col-md-4">
-
-                    <div class="card p-4 h-100">
-
-                        <h4>
-                            Avis clients
-                        </h4>
-
-                        <p>
-                            Consultez les retours d'expérience.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-    <!-- ======================================================
-FOOTER
-====================================================== -->
-    <footer class="bg-dark text-white py-4">
-
-        <div class="container text-center">
-
-            <p class="mb-0">
-
-                © 2026 BookPro - Tous droits réservés
-
-            </p>
-
-        </div>
-
-    </footer>
-
-</body>
-
-</html>
+<?php include("includes/public_footer.php"); ?>

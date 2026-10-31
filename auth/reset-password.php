@@ -36,65 +36,44 @@ if ($reset && $_SERVER["REQUEST_METHOD"] === "POST") {
         redirect("/auth/login.php");
     }
 }
+
+$pageTitle = "Nouveau mot de passe";
+include("../includes/auth_header.php");
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nouveau mot de passe - BookPro</title>
+<h1 class="mb-4">Nouveau mot de passe</h1>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php if (!$reset): ?>
 
-<body class="bg-light">
+    <div class="alert alert-danger">Ce lien est invalide ou a expiré.</div>
 
-<div class="container">
+    <a href="forgot-password.php" class="btn btn-primary btn-lg w-100">Demander un nouveau lien</a>
 
-    <div class="row justify-content-center mt-5">
+<?php else: ?>
 
-        <div class="col-md-5">
+    <?php if ($erreur): ?>
+        <div class="alert alert-danger"><?= e($erreur) ?></div>
+    <?php endif; ?>
 
-            <div class="card p-4 shadow">
+    <form method="POST">
 
-                <h2 class="text-center mb-4">Nouveau mot de passe</h2>
+        <?= csrf_field() ?>
 
-                <?php if (!$reset): ?>
-
-                    <div class="alert alert-danger">Ce lien est invalide ou a expiré.</div>
-
-                    <a href="forgot-password.php" class="btn btn-primary w-100">Demander un nouveau lien</a>
-
-                <?php else: ?>
-
-                    <?php if ($erreur): ?>
-                        <div class="alert alert-danger"><?= e($erreur) ?></div>
-                    <?php endif; ?>
-
-                    <form method="POST">
-
-                        <?= csrf_field() ?>
-
-                        <input type="password" name="password" class="form-control mb-3"
-                               placeholder="Nouveau mot de passe (8 caractères min.)" minlength="8" required>
-
-                        <input type="password" name="confirm_password" class="form-control mb-3"
-                               placeholder="Confirmer le mot de passe" required>
-
-                        <button class="btn btn-primary w-100">Enregistrer</button>
-
-                    </form>
-
-                <?php endif; ?>
-
-            </div>
-
+        <div class="input-icon mb-3">
+            <i class="bi bi-lock"></i>
+            <input type="password" name="password" id="password" class="form-control" placeholder="Nouveau mot de passe (8 caractères min.)" minlength="8" required>
+            <button type="button" class="eye-btn" onclick="togglePassword('password', this)"><i class="bi bi-eye-fill"></i></button>
         </div>
 
-    </div>
+        <div class="input-icon mb-4">
+            <i class="bi bi-shield-lock"></i>
+            <input type="password" name="confirm_password" class="form-control" placeholder="Confirmer le mot de passe" required>
+        </div>
 
-</div>
+        <button class="btn btn-primary btn-lg w-100">Enregistrer</button>
 
-</body>
-</html>
+    </form>
+
+<?php endif; ?>
+
+<?php include("../includes/auth_footer.php"); ?>

@@ -4,7 +4,7 @@
 // Variables : $service (valeurs), $submitLabel
 // ======================================================
 ?>
-<form method="POST" class="card p-4" style="max-width: 600px;">
+<form method="POST" class="bp-card" style="max-width: 600px;">
 
     <?= csrf_field() ?>
 
