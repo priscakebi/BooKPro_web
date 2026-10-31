@@ -119,6 +119,17 @@ CREATE TABLE `push_subscriptions` (
   CONSTRAINT `fk_push_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `rappels_pro`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `rappels_pro` (
+  `pro_id` int NOT NULL,
+  `jour` date NOT NULL,
+  `envoye_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`pro_id`,`jour`),
+  CONSTRAINT `fk_rappels_pro` FOREIGN KEY (`pro_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `reservations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -128,6 +139,7 @@ CREATE TABLE `reservations` (
   `disponibilite_id` int NOT NULL,
   `statut` enum('en_attente','confirmee','refusee','annulee') NOT NULL DEFAULT 'en_attente',
   `annule_par` enum('client','pro') DEFAULT NULL,
+  `rappel_envoye_at` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_by_client` tinyint(1) DEFAULT '0',
   `creneau_actif` int GENERATED ALWAYS AS (if((`statut` in (_utf8mb4'annulee',_utf8mb4'refusee')),NULL,`disponibilite_id`)) STORED,
@@ -171,6 +183,7 @@ CREATE TABLE `users` (
   `adresse` varchar(255) DEFAULT NULL,
   `code_postal` varchar(10) DEFAULT NULL,
   `photo` varchar(255) DEFAULT NULL,
+  `rappels_clients` tinyint(1) NOT NULL DEFAULT '1',
   `password` varchar(255) NOT NULL,
   `role` enum('admin','client','professionnel') NOT NULL DEFAULT 'client',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

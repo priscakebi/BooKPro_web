@@ -23,6 +23,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     csrf_check();
 
     $champs = ['nom', 'entreprise', 'telephone', 'metier', 'adresse', 'code_postal', 'ville', 'description'];
+    $pro['rappels_clients'] = empty($_POST['rappels_clients']) ? 0 : 1;
+
     foreach ($champs as $c) {
         $pro[$c] = trim($_POST[$c] ?? "");
     }
@@ -75,11 +77,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $pdo->prepare("
             UPDATE users
-            SET nom = ?, entreprise = ?, telephone = ?, metier = ?, adresse = ?, code_postal = ?, ville = ?, description = ?, photo = ?
+            SET nom = ?, entreprise = ?, telephone = ?, metier = ?, adresse = ?, code_postal = ?, ville = ?, description = ?, photo = ?,
+                rappels_clients = ?
             WHERE id = ?
         ")->execute([
             $pro['nom'], $pro['entreprise'] ?: null, $pro['telephone'], $pro['metier'], $pro['adresse'] ?: null,
-            $pro['code_postal'] ?: null, $pro['ville'], $pro['description'] ?: null, $pro['photo'], $proId
+            $pro['code_postal'] ?: null, $pro['ville'], $pro['description'] ?: null, $pro['photo'],
+            $pro['rappels_clients'], $proId
         ]);
 
         // Ancien fichier supprimé du disque
@@ -203,6 +207,16 @@ include("../includes/dash_header.php");
                         <input type="text" name="ville" class="form-control" value="<?= e($pro['ville']) ?>" required>
                     </div>
 
+                </div>
+
+                <h5 class="mb-3">Rappels</h5>
+
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" role="switch" name="rappels_clients" value="1" id="rappelsClients" <?= $pro['rappels_clients'] ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="rappelsClients">
+                        Envoyer un rappel par email à mes clients la veille de leur rendez-vous
+                        <span class="d-block small text-muted">Réduit les oublis et les absences. Vous recevez aussi chaque soir le résumé de votre journée du lendemain.</span>
+                    </label>
                 </div>
 
                 <p class="small text-muted"><i class="bi bi-shield-lock me-1"></i> Email (<?= e($pro['email']) ?>) et SIRET (<?= e($pro['siret']) ?>) ne sont pas affichés publiquement.</p>

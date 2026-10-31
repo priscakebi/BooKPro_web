@@ -5,7 +5,8 @@
 
 date_default_timezone_set('Europe/Paris');
 
-if (session_status() === PHP_SESSION_NONE) {
+// Pas de session pour les tâches automatiques (ligne de commande)
+if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     // Cookie de session inaccessible au JavaScript et non envoyé par d'autres sites
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();
@@ -32,6 +33,12 @@ const JOURS = [1 => 'Lundi', 2 => 'Mardi', 3 => 'Mercredi', 4 => 'Jeudi', 5 => '
 // Calculée automatiquement pour que les liens marchent
 // quel que soit le dossier d'installation.
 // ======================================================
+if (!defined('BASE_URL') && PHP_SAPI === 'cli') {
+    // Ligne de commande : chemin tiré de l'adresse configurée
+    require_once __DIR__ . '/../config/app.php';
+    define('BASE_URL', rtrim((string) parse_url(APP_URL, PHP_URL_PATH), '/'));
+}
+
 if (!defined('BASE_URL')) {
     $root = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']));
     $app  = str_replace('\\', '/', realpath(dirname(__DIR__)));
