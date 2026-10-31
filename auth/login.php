@@ -4,6 +4,7 @@
 // ======================================================
 require_once("../includes/auth.php");
 require("../config/database.php");
+require("../includes/connexion.php");
 
 // Page à rouvrir après connexion (ex : la page du pro consultée)
 $next = safe_next($_GET['next'] ?? $_POST['next'] ?? null);
@@ -24,25 +25,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     csrf_check();
 
     $email = trim($_POST["email"] ?? "");
-    $pass = $_POST["password"] ?? "";
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
+    [$user, $erreur] = tenter_connexion($pdo, $email, $_POST["password"] ?? "");
 
-    if ($user && password_verify($pass, $user["password"])) {
-
-        login_user($user);
-
+    if ($user) {
         // Client : directement vers les pros pour réserver
         redirect($next ?? ($user["role"] === "client" ? "/user/services.php" : dashboard_path($user["role"])));
-
     }
-
-    // Ralentit les tentatives de mot de passe en rafale
-    sleep(1);
-
-    $erreur = "Email ou mot de passe incorrect.";
 }
 
 $pageTitle = "Connexion";
@@ -86,7 +75,7 @@ include("../includes/auth_header.php");
 
 <div class="text-center mt-4">
     <p class="mb-1">Pas encore de compte ? <a href="register.php" class="fw-semibold">Créer un compte client</a></p>
-    <p class="mb-0 small text-muted">Vous êtes professionnel ? <a href="pro-register.php" class="fw-semibold">Rejoindre BookPro</a></p>
+    <p class="mb-0 small text-muted">Vous êtes professionnel ? <a href="pro-login.php" class="fw-semibold">Connexion pro</a> · <a href="pro-register.php" class="fw-semibold">Rejoindre BookPro</a></p>
 </div>
 
 <?php include("../includes/auth_footer.php"); ?>

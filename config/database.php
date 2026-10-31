@@ -24,4 +24,9 @@ try {
     error_log("Erreur BDD : " . $e->getMessage());
     die("Service momentanément indisponible.");
 }
+
+// Compte suspendu entre-temps : la session est fermée immédiatement
+if (function_exists('verifier_compte_actif')) {
+    verifier_compte_actif($pdo);
+}
 ?>

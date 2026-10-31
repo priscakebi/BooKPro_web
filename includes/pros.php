@@ -9,7 +9,7 @@ require_once __DIR__ . "/conges.php";
 // $filtres : q (texte libre), metier, ville ; $limit : nombre max
 function rechercher_pros(PDO $pdo, array $filtres = [], $limit = 60)
 {
-    $where = ["u.role = 'professionnel'"];
+    $where = ["u.role = 'professionnel'", "u.suspendu_at IS NULL"];
     $params = [];
 
     if (($filtres['q'] ?? '') !== '') {

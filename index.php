@@ -31,6 +31,30 @@ $pros = rechercher_pros($pdo, [], 6);
 $pageTitle = "Réservez un professionnel près de chez vous";
 $navTransparent = true;
 include("includes/public_header.php");
+
+// Un pro connecté a son propre accueil (la recherche est pour les clients)
+if ($role === 'professionnel') {
+    include("includes/home_pro.php");
+    include("includes/public_footer.php");
+    exit();
+}
+
+// Client connecté : prochain rendez-vous rappelé dans le hero
+$prochainRdv = null;
+
+if ($role === 'client') {
+    $stmt = $pdo->prepare("
+        SELECT d.date_disponible, d.heure_debut, s.nom_service
+        FROM reservations r
+        JOIN disponibilites d ON r.disponibilite_id = d.id
+        JOIN services s ON d.service_id = s.id
+        WHERE r.user_id = ? AND r.statut IN ('en_attente', 'confirmee')
+          AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
+        ORDER BY d.date_disponible, d.heure_debut LIMIT 1
+    ");
+    $stmt->execute([$_SESSION['user_id']]);
+    $prochainRdv = $stmt->fetch();
+}
 ?>
 
 <!-- ======================================================
@@ -44,7 +68,15 @@ HERO
 
             <div class="col-lg-7">
 
-                <span class="hero-badge mb-4 animate-in"><i class="bi bi-lightning-charge-fill"></i> Réservation en ligne, sans appel</span>
+                <?php if ($prochainRdv): ?>
+                    <a href="user/reservations.php" class="hero-badge mb-4 animate-in text-white text-decoration-none">
+                        <i class="bi bi-calendar-check"></i> Bonjour <?= e(explode(' ', $_SESSION['user']['nom'])[0]) ?> · prochain RDV <?= e(jour_court($prochainRdv['date_disponible'])) ?> à <?= heure($prochainRdv['heure_debut']) ?>
+                    </a>
+                <?php elseif ($role === 'client'): ?>
+                    <span class="hero-badge mb-4 animate-in"><i class="bi bi-emoji-smile"></i> Bonjour <?= e(explode(' ', $_SESSION['user']['nom'])[0]) ?>, de quoi avez-vous besoin ?</span>
+                <?php else: ?>
+                    <span class="hero-badge mb-4 animate-in"><i class="bi bi-lightning-charge-fill"></i> Réservation en ligne, sans appel</span>
+                <?php endif; ?>
 
                 <h1 class="mb-4 animate-in delay-1">
                     Le bon pro,<br>au bon moment,<br><span style="color:#7cf2dc">au juste prix.</span>
@@ -227,6 +259,7 @@ COMMENT ÇA MARCHE
 
 </section>
 
+<?php if (!$connecte): ?>
 <!-- ======================================================
 APPEL AUX PROS
 ====================================================== -->
@@ -255,5 +288,7 @@ APPEL AUX PROS
     </div>
 
 </section>
+
+<?php endif; ?>
 
 <?php include("includes/public_footer.php"); ?>

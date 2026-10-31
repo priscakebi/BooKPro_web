@@ -185,6 +185,8 @@ CREATE TABLE `users` (
   `photo` varchar(255) DEFAULT NULL,
   `slug` varchar(60) DEFAULT NULL,
   `rappels_clients` tinyint(1) NOT NULL DEFAULT '1',
+  `suspendu_at` datetime DEFAULT NULL,
+  `suspendu_motif` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','client','professionnel') NOT NULL DEFAULT 'client',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

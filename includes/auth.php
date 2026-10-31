@@ -184,6 +184,25 @@ function login_user($user)
     $_SESSION["role"] = $user["role"];
 }
 
+// Compte suspendu par un admin pendant qu'il était connecté : session fermée
+// (appelé à chaque requête par config/database.php)
+function verifier_compte_actif(PDO $pdo)
+{
+    if (empty($_SESSION['user_id'])) {
+        return;
+    }
+
+    $stmt = $pdo->prepare("SELECT suspendu_at FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $compte = $stmt->fetch();
+
+    if (!$compte || $compte['suspendu_at']) {
+        $_SESSION = [];
+        flash($compte ? "Votre compte a été suspendu. Contactez le support BookPro." : "Votre session a expiré.", 'danger');
+        redirect("/auth/login.php");
+    }
+}
+
 // Redirection "après connexion" : uniquement un chemin interne (/...)
 function safe_next($next)
 {
@@ -198,7 +217,12 @@ function require_login($role = null)
 {
     if (!isset($_SESSION['user_id'])) {
         flash("Connectez-vous pour accéder à cette page.", 'warning');
-        redirect("/auth/login.php");
+
+        // Retour à la page demandée après connexion (espace pro : connexion pro)
+        $page = substr($_SERVER['REQUEST_URI'] ?? '', strlen(BASE_URL));
+        $retour = safe_next($page) && $_SERVER['REQUEST_METHOD'] === 'GET' ? '?next=' . urlencode($page) : '';
+
+        redirect(($role === 'professionnel' ? "/auth/pro-login.php" : "/auth/login.php") . $retour);
     }
 
     // Mauvais rôle : on renvoie vers son propre espace

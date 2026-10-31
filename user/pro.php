@@ -14,7 +14,7 @@ $slug = $_GET['slug'] ?? null;
 
 $stmt = $pdo->prepare("
     SELECT id, nom, entreprise, metier, ville, adresse, code_postal, telephone, description, photo, slug, created_at
-    FROM users WHERE " . ($slug !== null ? "slug = ?" : "id = ?") . " AND role = 'professionnel'
+    FROM users WHERE " . ($slug !== null ? "slug = ?" : "id = ?") . " AND role = 'professionnel' AND suspendu_at IS NULL
 ");
 $stmt->execute([$slug ?? (int) ($_GET['id'] ?? 0)]);
 $pro = $stmt->fetch();

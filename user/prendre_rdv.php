@@ -35,7 +35,7 @@ $stmt = $pdo->prepare("
     FROM disponibilites d
     JOIN services s ON d.service_id = s.id
     JOIN users u ON s.user_id = u.id
-    WHERE d.id = ?
+    WHERE d.id = ? AND u.suspendu_at IS NULL
       AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
       AND " . SQL_HORS_CONGES . "
 

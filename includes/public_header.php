@@ -53,37 +53,45 @@ NAVBAR
 
         <div class="collapse navbar-collapse" id="bpNav">
 
+            <?php
+            // Liens du menu selon qui est connecté
+            $liensNav = [
+                ''              => [['/user/services.php', 'Trouver un pro'], ['/auth/pro-login.php', 'Espace pro']],
+                'client'        => [['/user/services.php', 'Trouver un pro'], ['/user/reservations.php', 'Mes réservations']],
+                'professionnel' => [['/pro/agenda.php', 'Mon agenda'], ['/pro/rdv.php', 'Réservations'], ['/user/pro.php?id=' . (int) ($_SESSION['user_id'] ?? 0), 'Ma page publique']],
+                'admin'         => [['/admin/dashboard.php', 'Administration'], ['/user/services.php', 'Voir les pros']],
+            ][$connecte ? $role : ''] ?? [];
+            ?>
+
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
 
-                <li class="nav-item">
-                    <a class="nav-link" href="<?= BASE_URL ?>/user/services.php">Trouver un pro</a>
-                </li>
+                <?php foreach ($liensNav as [$href, $label]): ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?= BASE_URL . $href ?>"><?= e($label) ?></a>
+                    </li>
+                <?php endforeach; ?>
 
                 <?php if ($connecte): ?>
 
-                    <?php if ($role === 'client'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?= BASE_URL ?>/user/reservations.php">Mes réservations</a>
-                        </li>
-                    <?php endif; ?>
-
-                    <li class="nav-item ms-lg-2">
-                        <a class="btn btn-primary" href="<?= BASE_URL . dashboard_path($role) ?>">
-                            <i class="bi bi-person-circle me-1"></i> Mon espace
+                    <!-- Compte : avatar + menu -->
+                    <li class="nav-item dropdown ms-lg-2">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <?= avatar($_SESSION['user'] ?? [], 32) ?>
+                            <span><?= e(explode(' ', $_SESSION['user']['nom'] ?? '')[0]) ?></span>
                         </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/auth/logout.php" title="Déconnexion">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2">
+                            <li><a class="dropdown-item rounded-3" href="<?= BASE_URL . dashboard_path($role) ?>"><i class="bi bi-grid-1x2 me-2"></i>Mon espace</a></li>
+                            <?php if ($role === 'professionnel'): ?>
+                                <li><a class="dropdown-item rounded-3" href="<?= BASE_URL ?>/pro/profil.php"><i class="bi bi-person-badge me-2"></i>Mon profil</a></li>
+                            <?php elseif ($role === 'client'): ?>
+                                <li><a class="dropdown-item rounded-3" href="<?= BASE_URL ?>/user/reservations.php"><i class="bi bi-calendar-event me-2"></i>Mes réservations</a></li>
+                            <?php endif; ?>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item rounded-3 text-danger" href="<?= BASE_URL ?>/auth/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+                        </ul>
                     </li>
 
                 <?php else: ?>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/auth/pro-register.php">Vous êtes pro ?</a>
-                    </li>
 
                     <li class="nav-item">
                         <a class="nav-link" href="<?= BASE_URL ?>/auth/login.php">Connexion</a>
