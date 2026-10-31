@@ -1124,6 +1124,176 @@ h1, h2, h3, h4, h5 {
 td.text-capitalize-first, div.text-capitalize-first, li.text-capitalize-first { display: revert; }
 
 /* ======================================================
+   GRAPHIQUES (statistiques)
+   Barres <= 24 px, bout arrondi 4 px côté valeur, carré côté axe,
+   grille en filet gris, textes jamais dans la couleur des données
+====================================================== */
+
+.viz-root {
+    --viz-series: #5b4ef5;        /* couleur de la marque (validée) */
+    --viz-series-muted: #c9c3fb;  /* même teinte, atténuée (période en cours) */
+    --viz-track: #ecebff;         /* fond de jauge : même rampe, plus clair */
+    --viz-grid: #e7e8f2;
+    --viz-axis: #c8cad8;
+    --viz-muted: #6b7090;
+}
+
+.viz-cols { position: relative; height: 240px; padding: 0 0 26px 44px; }
+
+.viz-grid { position: absolute; inset: 0 0 26px 44px; }
+
+.viz-gridline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--viz-grid); }
+
+.viz-gridline:last-child { border-top-color: var(--viz-axis); }
+
+.viz-gridline span {
+    position: absolute;
+    right: calc(100% + 8px);
+    transform: translateY(-50%);
+    font-size: .72rem;
+    color: var(--viz-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.viz-plot { position: relative; height: 100%; display: flex; align-items: flex-end; gap: 2px; }
+
+.viz-col-slot {
+    flex: 1 1 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+    outline: none;
+    cursor: default;
+}
+
+.viz-col {
+    width: min(24px, 70%);
+    min-height: 0;
+    background: var(--viz-series);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    transition: filter .15s;
+}
+
+.viz-col.is-muted { background: var(--viz-series-muted); }
+
+.viz-col-slot:hover .viz-col,
+.viz-col-slot:focus-visible .viz-col { filter: brightness(1.18); }
+
+.viz-col-slot:hover,
+.viz-col-slot:focus-visible { background: rgba(91, 78, 245, .05); border-radius: 6px; }
+
+.viz-col-label {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--bp-ink);
+    white-space: nowrap;
+}
+
+.viz-x {
+    position: absolute;
+    top: 100%;
+    margin-top: 6px;
+    font-size: .72rem;
+    color: var(--viz-muted);
+    white-space: nowrap;
+}
+
+/* Barres horizontales classées */
+.viz-bar-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 38%) 1fr;
+    gap: .75rem;
+    align-items: center;
+    padding: .35rem .25rem;
+    border-radius: 8px;
+    outline: none;
+}
+
+.viz-bar-row:hover, .viz-bar-row:focus-visible { background: rgba(91, 78, 245, .05); }
+
+.viz-bar-label { font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.viz-bar-track { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+
+.viz-bar {
+    height: 18px;
+    min-width: 2px;
+    background: var(--viz-series);
+    border-radius: 0 4px 4px 0;
+    flex-shrink: 0;
+}
+
+.viz-bar-value { font-size: .82rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Barre segmentée haute (28 px) */
+.viz-seg { display: flex; gap: 2px; height: 28px; }
+
+.viz-seg-part {
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: .76rem;
+    font-weight: 700;
+    min-width: 4px;
+    outline: none;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.viz-seg-part:hover, .viz-seg-part:focus-visible { filter: brightness(1.08); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--viz-axis); }
+
+.viz-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; margin-top: .75rem; font-size: .82rem; color: var(--bp-ink); }
+
+.viz-legend span { display: inline-flex; align-items: center; gap: .35rem; }
+
+.viz-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* Jauge */
+.viz-meter { height: 10px; border-radius: 999px; background: var(--viz-track); overflow: hidden; }
+
+.viz-meter-fill { height: 100%; background: var(--viz-series); border-radius: 999px; }
+
+/* Vue tableau */
+.viz-table summary { font-size: .78rem; color: var(--viz-muted); cursor: pointer; }
+
+.viz-table table { font-size: .82rem; font-variant-numeric: tabular-nums; }
+
+/* Infobulle : la valeur en premier, le libellé ensuite */
+.viz-tip {
+    position: fixed;
+    z-index: 1090;
+    pointer-events: none;
+    background: #0f1225;
+    color: #fff;
+    border-radius: 10px;
+    padding: .5rem .7rem;
+    font-size: .8rem;
+    box-shadow: 0 10px 30px rgba(15, 18, 37, .25);
+    max-width: 240px;
+    transform: translate(-50%, calc(-100% - 10px));
+}
+
+.viz-tip strong { display: block; font-size: .95rem; }
+
+.viz-tip span { opacity: .75; }
+
+/* Tuiles chiffres clés : évolution vs période précédente */
+.delta { font-size: .78rem; font-weight: 700; }
+.delta.up { color: #006300; }
+.delta.down { color: #b42318; }
+.delta.flat { color: var(--bp-muted); }
+
+/* ======================================================
    AFFICHETTE QR CODE (écran + impression)
 ====================================================== */
 

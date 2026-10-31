@@ -39,6 +39,7 @@ $menus = [
         'conges'       => ['/pro/conges.php', 'bi-airplane', 'Congés & fermetures'],
         'reservations' => ['/pro/rdv.php', 'bi-calendar-check', 'Réservations', $aTraiter],
         'clients'      => ['/pro/clients.php', 'bi-people', 'Clients'],
+        'stats'        => ['/pro/stats.php', 'bi-graph-up-arrow', 'Statistiques'],
         'partager'     => ['/pro/partager.php', 'bi-qr-code', 'Partager ma page'],
     ],
     'admin' => [
