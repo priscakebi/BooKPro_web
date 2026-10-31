@@ -3,12 +3,15 @@
 // ======================================================
 // DÉMARRAGE DE LA SESSION
 // ======================================================
-session_start();
+require_once("../includes/auth.php");
 
 // ======================================================
 // CONNEXION À LA BASE DE DONNÉES
 // ======================================================
 require("../config/database.php");
+
+// Métiers proposés (liste unique pour le formulaire et la validation)
+const METIERS = ['Plombier', 'Électricien', 'Mécanicien', 'Menuisier', 'Peintre'];
 
 // ======================================================
 // MESSAGE D'ERREUR OU DE SUCCÈS
@@ -24,22 +27,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // RÉCUPÉRATION DES DONNÉES
     // ==================================================
 
-    $nom = htmlspecialchars($_POST["nom"]);
+    csrf_check();
 
-    $email = htmlspecialchars($_POST["email"]);
+    // Valeurs brutes : on échappe uniquement à l'affichage
+    $nom = trim($_POST["nom"] ?? "");
 
-    $telephone = htmlspecialchars($_POST["telephone"]);
+    $email = trim($_POST["email"] ?? "");
 
-    $entreprise = htmlspecialchars($_POST["entreprise"]);
+    $telephone = trim($_POST["telephone"] ?? "");
 
-    $siret = htmlspecialchars($_POST["siret"]);
+    $entreprise = trim($_POST["entreprise"] ?? "");
 
-    $metier = htmlspecialchars($_POST["metier"]);
+    $siret = trim($_POST["siret"] ?? "");
 
-    $ville = htmlspecialchars($_POST["ville"]);
+    $metier = trim($_POST["metier"] ?? "");
 
-    $password = $_POST["password"];
-    $confirmPassword = $_POST["confirm_password"];
+    $ville = trim($_POST["ville"] ?? "");
+
+    $password = $_POST["password"] ?? "";
+    $confirmPassword = $_POST["confirm_password"] ?? "";
 
     // ==================================================
     // VÉRIFICATION DES CHAMPS
@@ -63,7 +69,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // VÉRIFICATION DU FORMAT DU SIRET
         // ==============================================
 
-        if (!preg_match('/^[0-9]{14}$/', $siret)) {
+        // Email déjà utilisé ?
+        $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $check->execute([$email]);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+            $message = "<div class='alert danger'>Adresse email invalide.</div>";
+
+        } elseif ($check->fetch()) {
+
+            $message = "<div class='alert danger'>Cet email est déjà utilisé.</div>";
+
+        } elseif (strlen($password) < 8) {
+
+            $message = "<div class='alert danger'>Le mot de passe doit contenir au moins 8 caractères.</div>";
+
+        } elseif (!in_array($metier, METIERS, true)) {
+
+            $message = "<div class='alert danger'>Métier invalide.</div>";
+
+        } elseif (!preg_match('/^[0-9]{14}$/', $siret)) {
 
             $message = "
 
@@ -140,15 +166,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // MESSAGE DE SUCCÈS
                 // ======================================
 
-                $message = "
+                flash("Votre compte professionnel a été créé avec succès. Connectez-vous pour publier vos services.");
 
-                        <div class='alert success'>
-
-                            Votre compte professionnel a été créé avec succès.
-
-                        </div>
-
-                    ";
+                redirect("/auth/login.php");
             }
         }
     } else {
@@ -245,6 +265,8 @@ PAGE INSCRIPTION PROFESSIONNEL
 
             <form method="POST">
 
+                <?= csrf_field() ?>
+
                 <!-- NOM -->
                 <div class="input-group-custom">
 
@@ -255,6 +277,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="text"
                         name="nom"
+                        value="<?= e($_POST['nom'] ?? '') ?>"
                         placeholder="Nom complet"
                         required>
 
@@ -270,6 +293,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="email"
                         name="email"
+                        value="<?= e($_POST['email'] ?? '') ?>"
                         placeholder="Adresse email"
                         required>
 
@@ -285,6 +309,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="text"
                         name="telephone"
+                        value="<?= e($_POST['telephone'] ?? '') ?>"
                         placeholder="Téléphone"
                         required>
 
@@ -300,6 +325,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="text"
                         name="entreprise"
+                        value="<?= e($_POST['entreprise'] ?? '') ?>"
                         placeholder="Nom de l'entreprise"
                         required>
 
@@ -315,6 +341,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="text"
                         name="siret"
+                        value="<?= e($_POST['siret'] ?? '') ?>"
                         maxlength="14"
                         placeholder="Numéro SIRET"
                         required>
@@ -334,25 +361,11 @@ PAGE INSCRIPTION PROFESSIONNEL
                             Choisissez un métier
                         </option>
 
-                        <option value="Plombier">
-                            Plombier
-                        </option>
-
-                        <option value="Électricien">
-                            Électricien
-                        </option>
-
-                        <option value="Mécanicien">
-                            Mécanicien
-                        </option>
-
-                        <option value="Menuisier">
-                            Menuisier
-                        </option>
-
-                        <option value="Peintre">
-                            Peintre
-                        </option>
+                        <?php foreach (METIERS as $m): ?>
+                            <option value="<?= e($m) ?>" <?= ($_POST['metier'] ?? '') === $m ? 'selected' : '' ?>>
+                                <?= e($m) ?>
+                            </option>
+                        <?php endforeach; ?>
 
                     </select>
 
@@ -368,6 +381,7 @@ PAGE INSCRIPTION PROFESSIONNEL
                     <input
                         type="text"
                         name="ville"
+                        value="<?= e($_POST['ville'] ?? '') ?>"
                         placeholder="Ville"
                         required>
 
@@ -470,29 +484,7 @@ LIENS BAS DE PAGE
 
     </section>
 
-    <script>
-        function togglePassword(inputId, button) {
-
-            const input = document.getElementById(inputId);
-
-            const icon = button.querySelector("i");
-
-            if (input.type === "password") {
-
-                input.type = "text";
-
-                icon.classList.remove("bi-eye-fill");
-                icon.classList.add("bi-eye-slash-fill");
-
-            } else {
-
-                input.type = "password";
-
-                icon.classList.remove("bi-eye-slash-fill");
-                icon.classList.add("bi-eye-fill");
-            }
-        }
-    </script>
+    <script src="../assets/app.js"></script>
 
 </body>
 

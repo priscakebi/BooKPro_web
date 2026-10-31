@@ -189,3 +189,20 @@ LIENS BAS DE PAGE
     color: #1d4ed8;
     transform: translateX(-3px);
 }
+/* ALERTES (la page n'utilise pas Bootstrap) */
+
+.alert{
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+}
+
+.alert.danger{
+    background: #fde8e8;
+    color: #b42318;
+}
+
+.alert.success{
+    background: #e6f6ec;
+    color: #146c43;
+}

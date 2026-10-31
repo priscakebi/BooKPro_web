@@ -67,3 +67,20 @@
     font-size: 26px;
     margin: 0;
 }
+/* MOBILE : sidebar au-dessus du contenu */
+@media (max-width: 767px) {
+
+    .dashboard-page > .d-flex {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        min-height: auto;
+    }
+
+    .content table {
+        display: block;
+        overflow-x: auto;
+    }
+}

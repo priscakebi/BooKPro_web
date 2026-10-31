@@ -1,184 +1,132 @@
 <?php
 
 // ======================================================
-// SESSION
+// SESSION + SECURITE (professionnels uniquement)
 // ======================================================
 
-session_start();
+require_once("../includes/auth.php");
 
-// ======================================================
-// SECURITE
-// ======================================================
-
-if (!isset($_SESSION['user'])) {
-
-    header("Location: ../auth/login.php");
-    exit();
-}
-
-// ======================================================
-// BDD
-// ======================================================
+require_login('professionnel');
 
 require("../config/database.php");
 
+$proId = $_SESSION['user_id'];
+
 // ======================================================
-// RECUPERATION DES SERVICES DU PROFESSIONNEL
+// STATISTIQUES
+// ======================================================
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM services WHERE user_id = ?");
+$stmt->execute([$proId]);
+$nbServices = $stmt->fetchColumn();
+
+$stmt = $pdo->prepare("
+
+    SELECT r.statut, COUNT(*) AS nb
+    FROM reservations r
+    JOIN disponibilites d ON r.disponibilite_id = d.id
+    JOIN services s ON d.service_id = s.id
+    WHERE s.user_id = ? AND d.date_disponible >= CURDATE()
+    GROUP BY r.statut
+
+");
+$stmt->execute([$proId]);
+$stats = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// ======================================================
+// PROCHAINES RÉSERVATIONS (en attente + confirmées)
 // ======================================================
 
 $stmt = $pdo->prepare("
 
-    SELECT *
-    FROM services
-    WHERE user_id = ?
+    SELECT r.statut, d.date_disponible, d.heure_debut, d.heure_fin,
+           s.nom_service, u.nom AS client
+    FROM reservations r
+    JOIN disponibilites d ON r.disponibilite_id = d.id
+    JOIN services s ON d.service_id = s.id
+    JOIN users u ON r.user_id = u.id
+    WHERE s.user_id = ?
+      AND d.date_disponible >= CURDATE()
+      AND r.statut IN ('en_attente', 'confirmee')
+    ORDER BY d.date_disponible, d.heure_debut
+    LIMIT 5
 
 ");
+$stmt->execute([$proId]);
+$prochaines = $stmt->fetchAll();
 
-$stmt->execute([$_SESSION['user_id']]);
-
-$services = $stmt->fetchAll();
+$pageTitle = "Tableau de bord professionnel";
+$active = "dashboard";
+include("../includes/dash_header.php");
 
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Dashboard Professionnel</title>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<link rel="stylesheet" href="../assets/pro-dashboard.css">
-
-</head>
-
-<body>
-
 <!-- ======================================================
-SIDEBAR
+STATS
 ====================================================== -->
+<div class="row g-3">
 
-<div class="sidebar">
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <i class="bi bi-briefcase"></i>
+            <h4><?= (int) $nbServices ?></h4>
+            <p>Services</p>
+        </div>
+    </div>
 
-    <h2>BookPro</h2>
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <i class="bi bi-hourglass-split"></i>
+            <h4><?= (int) ($stats['en_attente'] ?? 0) ?></h4>
+            <p>À confirmer</p>
+        </div>
+    </div>
 
-    <a href="dashboard.php">
-        Mes services
-    </a>
-
-    <a href="add-service.php">
-        Ajouter un service
-    </a>
-
-    <a href="reservations.php">
-        Réservations
-    </a>
-
-    <a href="../auth/logout.php">
-        Déconnexion
-    </a>
-
-</div>
-
-<!-- ======================================================
-CONTENU
-====================================================== -->
-
-<div class="content">
-
-    <h1>
-
-        Tableau de bord professionnel
-
-    </h1>
-
-    <div class="card p-4">
-
-        <h3>
-
-            Mes services
-
-        </h3>
-
-        <a
-            href="add-service.php"
-            class="btn btn-primary mb-3">
-
-            Ajouter un service
-
-        </a>
-
-        <table class="table table-bordered">
-
-            <thead>
-
-                <tr>
-
-                    <th>Nom</th>
-
-                    <th>Description</th>
-
-                    <th>Horaires</th>
-
-                    <th>Actions</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-            <?php foreach($services as $service): ?>
-
-                <tr>
-
-                    <td>
-                        <?= $service['nom_service'] ?>
-                    </td>
-
-                    <td>
-                        <?= $service['description'] ?>
-                    </td>
-
-                    <td>
-                        <?= $service['horaires'] ?>
-                    </td>
-
-                    <td>
-
-                        <a
-                            href="edit-service.php?id=<?= $service['id'] ?>"
-                            class="btn btn-warning btn-sm">
-
-                            Modifier
-
-                        </a>
-
-                        <a
-                            href="delete-service.php?id=<?= $service['id'] ?>"
-                            class="btn btn-danger btn-sm">
-
-                            Supprimer
-
-                        </a>
-
-                    </td>
-
-                </tr>
-
-            <?php endforeach; ?>
-
-            </tbody>
-
-        </table>
-
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <i class="bi bi-check-circle"></i>
+            <h4><?= (int) ($stats['confirmee'] ?? 0) ?></h4>
+            <p>Confirmées à venir</p>
+        </div>
     </div>
 
 </div>
 
-</body>
-</html>
+<!-- ======================================================
+PROCHAINES RÉSERVATIONS
+====================================================== -->
+<div class="card mt-4 p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Prochaines réservations</h4>
+        <a href="rdv.php" class="btn btn-outline-primary btn-sm">Tout voir</a>
+    </div>
+
+    <?php if (empty($prochaines)): ?>
+
+        <p class="text-muted mb-0">Aucune réservation à venir.</p>
+
+    <?php else: ?>
+
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr><th>Date</th><th>Créneau</th><th>Service</th><th>Client</th><th>Statut</th></tr>
+            </thead>
+            <tbody>
+            <?php foreach ($prochaines as $r): ?>
+                <tr>
+                    <td><?= date_fr($r['date_disponible']) ?></td>
+                    <td><?= heure($r['heure_debut']) ?> - <?= heure($r['heure_fin']) ?></td>
+                    <td><?= e($r['nom_service']) ?></td>
+                    <td><?= e($r['client']) ?></td>
+                    <td><?= statut_badge($r['statut']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+
+    <?php endif; ?>
+
+</div>
+
+<?php include("../includes/dash_footer.php"); ?>

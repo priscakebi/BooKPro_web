@@ -1,104 +1,59 @@
 <?php
 // ======================================================
-// SESSION - sécurise l'accès au dashboard
+// SESSION + SECURITE (clients uniquement)
 // ======================================================
-session_start();
+require_once("../includes/auth.php");
+
+require_login('client');
+
+require("../config/database.php");
+
+$userId = $_SESSION['user_id'];
 
 // ======================================================
-// PROTECTION : si non connecté → login
+// STATISTIQUES (réservations à venir par statut)
 // ======================================================
-if (!isset($_SESSION['user'])) {
-    header("Location: ../auth/login.php");
-    exit();
-}
+$stmt = $pdo->prepare("
+    SELECT r.statut, COUNT(*) AS nb
+    FROM reservations r
+    JOIN disponibilites d ON r.disponibilite_id = d.id
+    WHERE r.user_id = ? AND d.date_disponible >= CURDATE()
+    GROUP BY r.statut
+");
+$stmt->execute([$userId]);
+$stats = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ?");
+$stmt->execute([$userId]);
+$total = $stmt->fetchColumn();
 
 // ======================================================
-// RÉCUPÉRATION UTILISATEUR CONNECTÉ
+// PROCHAIN RENDEZ-VOUS
 // ======================================================
-$user = $_SESSION['user'];
+$stmt = $pdo->prepare("
+    SELECT r.statut, d.date_disponible, d.heure_debut, d.heure_fin, s.nom_service, u.nom AS pro
+    FROM reservations r
+    JOIN disponibilites d ON r.disponibilite_id = d.id
+    JOIN services s ON d.service_id = s.id
+    JOIN users u ON s.user_id = u.id
+    WHERE r.user_id = ?
+      AND r.statut IN ('en_attente', 'confirmee')
+      AND CONCAT(d.date_disponible, ' ', d.heure_debut) > NOW()
+    ORDER BY d.date_disponible, d.heure_debut
+    LIMIT 1
+");
+$stmt->execute([$userId]);
+$prochain = $stmt->fetch();
+
+$pageTitle = "Tableau de bord";
+$active = "dashboard";
+include("../includes/dash_header.php");
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Client - BookPro</title>
-
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="../assets/dashboard.css">
-
-</head>
-
-<body class="dashboard-page">
-
-<div class="d-flex">
-
-    <!-- ======================================================
-    SIDEBAR
-    ====================================================== -->
-    <div class="sidebar p-3">
-
-        <h3 class="text-white mb-4">
-            BookPro
-        </h3>
-
-        <!-- USER INFO -->
-        <div class="user-box mb-4">
-
-            <i class="bi bi-person-circle"></i>
-
-            <div>
-                <small>Bienvenue</small><br>
-
-                <!-- NOM SÉCURISÉ -->
-                <strong><?= htmlspecialchars($user['nom']) ?></strong>
-            </div>
-
-        </div>
-
-        <!-- MENU -->
-        <a href="dashboard.php" class="menu active">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <a href="#" class="menu">
-            <i class="bi bi-calendar-event"></i> Mes réservations
-        </a>
-
-        <a href="#" class="menu">
-            <i class="bi bi-clock-history"></i> Historique
-        </a>
-
-        <a href="#" class="menu">
-            <i class="bi bi-gear"></i> Paramètres
-        </a>
-
-        <a href="../auth/logout.php" class="menu text-danger">
-            <i class="bi bi-box-arrow-right"></i> Déconnexion
-        </a>
-
-    </div>
-
-    <!-- ======================================================
-    CONTENT
-    ====================================================== -->
-    <div class="content p-4 w-100">
-
-        <h2 class="mb-4">Tableau de bord</h2>
-
         <!-- ======================================================
-        CARDS STATS (PAS DE DONNÉES BRUTES SQL)
+        CARDS STATS
         ====================================================== -->
-        <div class="row">
+        <div class="row g-3">
 
             <div class="col-md-4">
 
@@ -106,7 +61,7 @@ $user = $_SESSION['user'];
 
                     <i class="bi bi-calendar-check"></i>
 
-                    <h4>0</h4>
+                    <h4><?= (int) $total ?></h4>
 
                     <p>Réservations</p>
 
@@ -120,7 +75,7 @@ $user = $_SESSION['user'];
 
                     <i class="bi bi-hourglass-split"></i>
 
-                    <h4>0</h4>
+                    <h4><?= (int) ($stats['en_attente'] ?? 0) ?></h4>
 
                     <p>En attente</p>
 
@@ -134,9 +89,9 @@ $user = $_SESSION['user'];
 
                     <i class="bi bi-check-circle"></i>
 
-                    <h4>0</h4>
+                    <h4><?= (int) ($stats['confirmee'] ?? 0) ?></h4>
 
-                    <p>Confirmées</p>
+                    <p>Confirmées à venir</p>
 
                 </div>
 
@@ -145,21 +100,30 @@ $user = $_SESSION['user'];
         </div>
 
         <!-- ======================================================
-        SECTION BIENVENUE (UI PROPRE)
+        PROCHAIN RENDEZ-VOUS
         ====================================================== -->
         <div class="card mt-4 p-4">
 
-            <h4>Bienvenue <?= htmlspecialchars($user['nom']) ?> 👋</h4>
+            <h4>Bienvenue <?= e($_SESSION['user']['nom']) ?> 👋</h4>
 
-            <p class="text-muted mb-0">
-                Ici tu peux gérer tes réservations, consulter ton historique et modifier ton profil.
-            </p>
+            <?php if ($prochain): ?>
+
+                <p class="mb-0">
+                    Prochain rendez-vous : <strong><?= e($prochain['nom_service']) ?></strong>
+                    avec <?= e($prochain['pro']) ?>,
+                    le <?= date_fr($prochain['date_disponible']) ?>
+                    de <?= heure($prochain['heure_debut']) ?> à <?= heure($prochain['heure_fin']) ?>
+                    <?= statut_badge($prochain['statut']) ?>
+                </p>
+
+            <?php else: ?>
+
+                <p class="text-muted">Aucun rendez-vous prévu.</p>
+
+                <a href="services.php" class="btn btn-primary align-self-start">Trouver un professionnel</a>
+
+            <?php endif; ?>
 
         </div>
 
-    </div>
-
-</div>
-
-</body>
-</html>
+<?php include("../includes/dash_footer.php"); ?>

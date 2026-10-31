@@ -1,12 +1,18 @@
 <?php
 
 // ======================================================
-// SESSION
+// SESSION + SECURITE (professionnels uniquement)
 // ======================================================
 
-session_start();
+require_once("../includes/auth.php");
+
+require_login('professionnel');
 
 require("../config/database.php");
+require("_service.php");
+
+$service = [];
+$erreur = null;
 
 // ======================================================
 // AJOUT SERVICE
@@ -14,66 +20,43 @@ require("../config/database.php");
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $nom = $_POST['nom_service'];
+    csrf_check();
 
-    $description = $_POST['description'];
+    [$service, $erreur] = validate_service($_POST);
 
-    $horaires = $_POST['horaires'];
+    if ($erreur === null) {
 
-    $insert = $pdo->prepare("
+        $insert = $pdo->prepare("
 
-        INSERT INTO services (
+            INSERT INTO services (user_id, nom_service, description, prix, duree)
+            VALUES (?, ?, ?, ?, ?)
 
-            user_id,
-            nom_service,
-            description,
-            horaires
+        ");
 
-        )
+        $insert->execute([
+            $_SESSION['user_id'],
+            $service['nom_service'],
+            $service['description'],
+            $service['prix'],
+            $service['duree']
+        ]);
 
-        VALUES (?, ?, ?, ?)
+        flash("Service ajouté. Pensez à publier vos disponibilités.");
 
-    ");
-
-    $insert->execute([
-
-        $_SESSION['user_id'],
-        $nom,
-        $description,
-        $horaires
-
-    ]);
-
-    header("Location: dashboard.php");
-    exit();
+        redirect("/pro/services.php");
+    }
 }
+
+$pageTitle = "Ajouter un service";
+$active = "services";
+include("../includes/dash_header.php");
 
 ?>
 
-<form method="POST">
+<?php if ($erreur): ?>
+    <div class="alert alert-danger"><?= e($erreur) ?></div>
+<?php endif; ?>
 
-    <input
-        type="text"
-        name="nom_service"
-        placeholder="Nom du service"
-        required>
+<?php $submitLabel = "Ajouter"; include("_service_form.php"); ?>
 
-    <textarea
-        name="description"
-        placeholder="Description"
-        required>
-    </textarea>
-
-    <input
-        type="text"
-        name="horaires"
-        placeholder="Ex : Lun-Ven 8h-18h"
-        required>
-
-    <button type="submit">
-
-        Ajouter
-
-    </button>
-
-</form>
+<?php include("../includes/dash_footer.php"); ?>

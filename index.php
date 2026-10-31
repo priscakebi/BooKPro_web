@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once("includes/auth.php");
 
 // ======================================================
 // UTILISATEUR CONNECTÉ ?
@@ -23,7 +23,7 @@ $user = $_SESSION['user'] ?? null;
     <!-- ======================================================
     BOOTSTRAP
     ====================================================== -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- ======================================================
     BOOTSTRAP ICONS
@@ -40,9 +40,6 @@ $user = $_SESSION['user'] ?? null;
 
 <body>
 
-    <!-- ======================================================
-NAVBAR
-====================================================== -->
     <!-- ======================================================
 NAVBAR
 ====================================================== -->
@@ -68,16 +65,11 @@ NAVBAR
                 Services
             </a>
 
-            <!-- PROFESSIONNELS -->
-            <a class="nav-link text-white" href="./auth/pro-register.php">
-                Devenir Professionnel
-            </a>
-
             <?php if ($user): ?>
 
                 <!-- MON COMPTE -->
                 <a class="nav-link text-white"
-                   href="user/dashboard.php">
+                   href="<?= ltrim(dashboard_path($user["role"] ?? ""), "/") ?>">
 
                     <i class="bi bi-person-circle"></i>
 
@@ -92,6 +84,11 @@ NAVBAR
                 </a>
 
             <?php else: ?>
+
+                <!-- PROFESSIONNELS -->
+                <a class="nav-link text-white" href="auth/pro-register.php">
+                    Devenir Professionnel
+                </a>
 
                 <!-- CONNEXION -->
                 <a class="login-btn"
@@ -116,8 +113,8 @@ NAVBAR
             <h1>BookPro</h1>
             <p> Trouvez et réservez vos services en quelques clics </p> 
             <!-- SEARCH -->
-            <form class="search-box"> 
-                <input type="text" class="form-control form-control-lg mb-3" placeholder="Plombier, mécanicien, menuisier..."> 
+            <form class="search-box" method="GET" action="user/services.php">
+                <input type="text" name="search" class="form-control form-control-lg mb-3" placeholder="Plombier, mécanicien, menuisier...">
                 <button class="btn btn-light w-100"> Rechercher </button> 
             </form>
         </div>
@@ -136,33 +133,26 @@ CATÉGORIES POPULAIRES
 
             <div class="row g-4">
 
-                <div class="col-md-3">
-                    <div class="card text-center p-4">
-                        <i class="bi bi-droplet fs-1 text-primary"></i>
-                        <h5 class="mt-3">Plomberie</h5>
-                    </div>
-                </div>
+                <?php
+                // Catégorie => [icône, mot-clé de recherche (métier du pro)]
+                $categories = [
+                    'Plomberie'   => ['bi-droplet', 'Plomb'],
+                    'Mécanique'   => ['bi-car-front', 'Mécani'],
+                    'Électricité' => ['bi-lightning', 'Électri'],
+                    'Menuiserie'  => ['bi-hammer', 'Menuis'],
+                ];
+                ?>
 
+                <?php foreach ($categories as $nom => [$icon, $recherche]): ?>
                 <div class="col-md-3">
-                    <div class="card text-center p-4">
-                        <i class="bi bi-car-front fs-1 text-primary"></i>
-                        <h5 class="mt-3">Mécanique</h5>
-                    </div>
+                    <a href="user/services.php?search=<?= urlencode($recherche) ?>" class="text-decoration-none text-dark">
+                        <div class="card text-center p-4 h-100">
+                            <i class="bi <?= $icon ?> fs-1 text-primary"></i>
+                            <h5 class="mt-3"><?= $nom ?></h5>
+                        </div>
+                    </a>
                 </div>
-
-                <div class="col-md-3">
-                    <div class="card text-center p-4">
-                        <i class="bi bi-lightning fs-1 text-primary"></i>
-                        <h5 class="mt-3">Électricité</h5>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="card text-center p-4">
-                        <i class="bi bi-hammer fs-1 text-primary"></i>
-                        <h5 class="mt-3">Menuiserie</h5>
-                    </div>
-                </div>
+                <?php endforeach; ?>
 
             </div>
 
@@ -318,4 +308,3 @@ FOOTER
 </body>
 
 </html>
-```

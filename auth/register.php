@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once("../includes/auth.php");
 
 require_once("../config/database.php");
 
@@ -7,16 +7,22 @@ $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $nom = trim(htmlspecialchars($_POST["nom"]));
-    $email = trim(htmlspecialchars($_POST["email"]));
-    $password = $_POST["password"];
-    $confirmPassword = $_POST["confirm_password"];
+    csrf_check();
+
+    $nom = trim($_POST["nom"] ?? "");
+    $email = trim($_POST["email"] ?? "");
+    $password = $_POST["password"] ?? "";
+    $confirmPassword = $_POST["confirm_password"] ?? "";
 
     if (!empty($nom) && !empty($email) && !empty($password) && !empty($confirmPassword)) {
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
             $message = '<div class="alert alert-danger">Adresse email invalide.</div>';
+
+        } elseif (strlen($password) < 8) {
+
+            $message = '<div class="alert alert-danger">Le mot de passe doit contenir au moins 8 caractères.</div>';
 
         } elseif ($password !== $confirmPassword) {
 
@@ -40,14 +46,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     VALUES (?, ?, ?)
                 ");
 
-                if ($sql->execute([$nom, $email, $passwordHash])) {
+                $sql->execute([$nom, $email, $passwordHash]);
 
-                    $message = '<div class="alert alert-success">Compte créé avec succès.</div>';
+                flash("Compte créé avec succès. Vous pouvez vous connecter.");
 
-                } else {
-
-                    $message = '<div class="alert alert-danger">Une erreur est survenue.</div>';
-                }
+                redirect("/auth/login.php");
             }
         }
 
@@ -101,6 +104,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <?= $message ?>
 
                     <form method="POST">
+
+                        <?= csrf_field() ?>
 
                         <!-- Nom -->
 
@@ -228,31 +233,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     </section>
 
-    <script>
-
-        function togglePassword(inputId, button) {
-
-            const input = document.getElementById(inputId);
-
-            const icon = button.querySelector("i");
-
-            if (input.type === "password") {
-
-                input.type = "text";
-
-                icon.classList.remove("bi-eye-fill");
-                icon.classList.add("bi-eye-slash-fill");
-
-            } else {
-
-                input.type = "password";
-
-                icon.classList.remove("bi-eye-slash-fill");
-                icon.classList.add("bi-eye-fill");
-            }
-        }
-
-    </script>
+    <script src="../assets/app.js"></script>
 
 </body>
 </html>

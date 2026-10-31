@@ -1,13 +1,18 @@
 <?php
 // ======================================================
-// DÉMARRAGE DE LA SESSION
+// DÉMARRAGE DE LA SESSION + FONCTIONS COMMUNES
 // ======================================================
-session_start();
+require_once("../includes/auth.php");
 
 // ======================================================
 // CONNEXION À LA BASE DE DONNÉES
 // ======================================================
 require("../config/database.php");
+
+// Déjà connecté : direction son espace
+if (isset($_SESSION["user_id"])) {
+    redirect(dashboard_path($_SESSION["role"]));
+}
 
 // ======================================================
 // VARIABLE POUR LES MESSAGES
@@ -19,11 +24,13 @@ $message = "";
 // ======================================================
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
+    csrf_check();
+
     // ==================================================
     // RÉCUPÉRATION DES DONNÉES
     // ==================================================
-    $email = htmlspecialchars(trim($_POST["email"]));
-    $pass = $_POST["password"];
+    $email = trim($_POST["email"] ?? "");
+    $pass = $_POST["password"] ?? "";
 
     // ==================================================
     // RECHERCHE DE L'UTILISATEUR
@@ -42,36 +49,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // ==============================================
         // CRÉATION DES VARIABLES DE SESSION
         // ==============================================
+        // Régénération de l'identifiant de session
+        session_regenerate_id(true);
+
+        // On ne garde pas le hash du mot de passe en session
+        unset($user["password"]);
+
         $_SESSION["user"] = $user;
         $_SESSION["user_id"] = $user["id"];
         $_SESSION["email"] = $user["email"];
         $_SESSION["role"] = $user["role"];
 
-        // Régénération de l'identifiant de session
-        session_regenerate_id(true);
-
         // ==============================================
         // REDIRECTION SELON LE RÔLE
         // ==============================================
-        if ($user["role"] === "admin") {
-
-            header("Location: ../admin/dashboard.php");
-            exit();
-
-        } elseif ($user["role"] === "professionnel") {
-
-            header("Location: ../pro/pro-dashboard.php");
-            exit();
-
-        } else {
-
-            // Client
-            header("Location: ../user/services.php");
-            exit();
-
-        }
+        // Client : directement vers les services pour réserver
+        redirect($user["role"] === "client" ? "/user/services.php" : dashboard_path($user["role"]));
 
     } else {
+
+        // Ralentit les tentatives de mot de passe en rafale
+        sleep(1);
 
         // ==============================================
         // IDENTIFIANTS INCORRECTS
@@ -102,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <!-- ==================================================
     BOOTSTRAP
     ================================================== -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- ==================================================
     CSS PERSONNALISÉ
@@ -133,10 +131,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </h4>
 
                     <!-- Message -->
+                    <?php include("../includes/alertes.php"); ?>
+
                     <?= $message ?>
 
                     <!-- Formulaire -->
                     <form method="POST">
+
+                        <?= csrf_field() ?>
 
                         <!-- Email -->
                         <input
