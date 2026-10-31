@@ -6,6 +6,6 @@ RewriteEngine On
 RewriteRule ^p/([a-z0-9-]+)/?$ user/pro.php?slug=$1 [L,QSA]
 
 # Les fichiers sensibles ne sont jamais servis
-<FilesMatch "\.(sql|log|bat)$">
+<FilesMatch "\.(sql|log|bat|md)$">
     Require all denied
 </FilesMatch>
